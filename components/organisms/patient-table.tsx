@@ -128,7 +128,8 @@ export function PatientTable({
         {patients.map((patient) => {
           const fullPatientName = getFullPatientName(
             patient.initials,
-            patient.bedId
+            patient.bedId,
+            patient._id
           )
           const showsLocalRosterName = fullPatientName !== patient.initials
 

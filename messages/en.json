@@ -1,0 +1,58 @@
+{
+  "Header": {
+    "openSidebar": "Open sidebar navigation",
+    "title": "Clinical Workspace",
+    "subtitle": "Tenant-aware dashboard foundation"
+  },
+  "LanguageSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "tr": "Turkish"
+  },
+  "Sidebar": {
+    "workspaceSubtitle": "Clinical tenant workspace",
+    "patientsLabel": "Patients",
+    "patientsDescription": "Clinic census and patient workflow queue.",
+    "wardMapLabel": "Ward Map",
+    "wardMapDescription": "Interactive room layout and patient bed placement board.",
+    "visitLabel": "Visit & Print",
+    "visitDescription": "Mobile rounds cards and A4 visit-sheet printing.",
+    "settingsLabel": "Settings",
+    "settingsDescription": "Tenant preferences, conventions, and clinic setup."
+  },
+  "WardMap": {
+    "title": "Ward map",
+    "loadingOrganization": "Loading organization context...",
+    "selectOrganization": "Select a clinic organization to load the interactive ward layout.",
+    "loadingPlacements": "Loading rooms and patient placements...",
+    "noLayoutTitle": "No ward layout configured",
+    "noLayoutDescription": "Build the room list first so the map can generate droppable bed slots.",
+    "openWardLayoutEditor": "Open ward layout editor",
+    "heroPhase": "Phase 10",
+    "heroBadge": "Interactive Ward Map",
+    "heroTitle": "Ward layout board",
+    "heroDescription": "Drag patient cards into empty beds for immediate local feedback while the updated placement is saved back to Convex in the background.",
+    "rooms": "Rooms",
+    "beds": "Beds",
+    "patients": "Patients",
+    "placementTitle": "Patients needing bed placement",
+    "placementDescription": "Drag from here when a patient does not already match a generated bed ID.",
+    "placementEmpty": "All patients are currently placed into configured beds.",
+    "roomOccupancy": "{occupiedBeds} / {totalBeds} beds occupied",
+    "roomBeds": "{count} beds",
+    "bedOccupied": "Occupied",
+    "bedEmpty": "Empty",
+    "emptyBed": "Empty Bed",
+    "localNameUnavailable": "Local roster name not available",
+    "diagnosis": "Diagnosis",
+    "service": "Service / Ward",
+    "serviceUnset": "Service not set",
+    "daySummary": "Y{admittedDays} / PO{postOpDays}",
+    "toasts": {
+      "missingContext": "Select an organization and sign in before moving patients.",
+      "occupied": "That bed is already occupied.",
+      "moveSuccess": "{patientName} moved to {destination}.",
+      "moveError": "Unable to move the patient."
+    }
+  }
+}

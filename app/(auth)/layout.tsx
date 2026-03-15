@@ -1,6 +1,5 @@
-import Link from "next/link"
-
 import { ThemeToggle } from "@/components/molecules/theme-toggle"
+import { Link } from "@/i18n/navigation"
 
 type AuthLayoutProps = {
   children: React.ReactNode

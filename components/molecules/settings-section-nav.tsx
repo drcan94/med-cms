@@ -1,11 +1,10 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import type { LucideIcon } from "lucide-react"
 import { CreditCard, LayoutGrid, ListChecks, Settings2 } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button"
+import { Link, usePathname } from "@/i18n/navigation"
 import { cn } from "@/lib/utils"
 
 type SettingsNavItem = {
@@ -65,13 +64,13 @@ export function SettingsSectionNav() {
             aria-current={isActive ? "page" : undefined}
             className={cn(
               buttonVariants({ variant: isActive ? "secondary" : "ghost" }),
-              "h-auto items-start justify-start gap-3 px-3 py-3 text-left"
+              "h-auto min-w-0 items-start justify-start gap-3 px-3 py-3 text-left"
             )}
           >
             <Icon className="mt-0.5 size-4 shrink-0 text-primary" />
-            <span className="space-y-1">
+            <span className="min-w-0 space-y-1">
               <span className="block text-sm font-medium">{label}</span>
-              <span className="block text-xs leading-5 text-muted-foreground">
+              <span className="block text-xs leading-5 text-muted-foreground break-words text-wrap">
                 {description}
               </span>
             </span>

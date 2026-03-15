@@ -1,6 +1,7 @@
 "use client"
 
 import { Draggable } from "@hello-pangea/dnd"
+import { useTranslations } from "next-intl"
 
 import type { Doc } from "@/convex/_generated/dataModel"
 import { calculateClinicalDays } from "@/hooks/useClinicalDates"
@@ -13,25 +14,32 @@ type WardPatientCardProps = {
   draggingEnabled?: boolean
   fullName: string
   index: number
+  onSelectPatient?: (patient: PatientRecord) => void
   patient: PatientRecord
 }
 
-function formatClinicalDaySummary(patient: PatientRecord): string {
+function getClinicalDayValues(patient: PatientRecord) {
   const clinicalDays = calculateClinicalDays(
     patient.admissionDate,
     patient.surgeryDate
   )
 
-  return `Y${clinicalDays.admittedDays} / PO${clinicalDays.postOpDays ?? "-"}`
+  return {
+    admittedDays: clinicalDays.admittedDays,
+    postOpDays: clinicalDays.postOpDays ?? "-",
+  }
 }
 
 export function WardPatientCard({
   draggingEnabled = true,
   fullName,
   index,
+  onSelectPatient,
   patient,
 }: Readonly<WardPatientCardProps>) {
+  const t = useTranslations("WardMap")
   const showsLocalName = fullName !== patient.initials
+  const clinicalDays = getClinicalDayValues(patient)
 
   return (
     <Draggable
@@ -44,6 +52,23 @@ export function WardPatientCard({
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
+          role={onSelectPatient ? "button" : undefined}
+          tabIndex={onSelectPatient ? 0 : undefined}
+          onClick={() => {
+            if (!snapshot.isDragging) {
+              onSelectPatient?.(patient)
+            }
+          }}
+          onKeyDown={(event) => {
+            if (
+              onSelectPatient &&
+              !snapshot.isDragging &&
+              (event.key === "Enter" || event.key === " ")
+            ) {
+              event.preventDefault()
+              onSelectPatient(patient)
+            }
+          }}
           className={cn(
             "grid gap-3 rounded-xl border bg-background p-3 shadow-xs",
             draggingEnabled
@@ -58,15 +83,29 @@ export function WardPatientCard({
                 {patient.initials}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                {showsLocalName ? fullName : "Local roster name not available"}
+                {showsLocalName ? fullName : t("localNameUnavailable")}
               </p>
             </div>
-            <Badge variant="outline">{formatClinicalDaySummary(patient)}</Badge>
+            <Badge variant="outline">
+              {t("daySummary", {
+                admittedDays: clinicalDays.admittedDays,
+                postOpDays: clinicalDays.postOpDays,
+              })}
+            </Badge>
           </div>
+
+          {patient.serviceName ? (
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t("service")}
+              </p>
+              <p className="text-sm leading-5 text-foreground">{patient.serviceName}</p>
+            </div>
+          ) : null}
 
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Diagnosis
+              {t("diagnosis")}
             </p>
             <p className="text-sm leading-5 text-foreground">{patient.diagnosis}</p>
           </div>

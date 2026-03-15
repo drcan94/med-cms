@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Geist_Mono, Inter } from "next/font/google"
+import { NextIntlClientProvider } from "next-intl"
+import { getLocale, getMessages } from "next-intl/server"
 
 import { ConvexClientProvider } from "@/components/convex-client-provider"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -27,14 +29,16 @@ export const metadata: Metadata = {
   description: "Multi-tenant clinical management SaaS foundation.",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()])
+
   return (
     <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
+      <html lang={locale} suppressHydrationWarning>
         <body
           className={cn(
             inter.variable,
@@ -48,7 +52,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <ConvexClientProvider>{children}</ConvexClientProvider>
+            <NextIntlClientProvider messages={messages}>
+              <ConvexClientProvider>{children}</ConvexClientProvider>
+            </NextIntlClientProvider>
             <Toaster closeButton position="top-right" richColors />
           </ThemeProvider>
         </body>

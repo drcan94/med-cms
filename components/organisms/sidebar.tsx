@@ -1,11 +1,11 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import type { LucideIcon } from "lucide-react"
 import { Building2, LayoutGrid, Printer, Settings, UsersRound } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 import { Badge } from "@/components/ui/badge"
+import { Link, usePathname } from "@/i18n/navigation"
 import { cn } from "@/lib/utils"
 
 type SidebarProps = {
@@ -14,36 +14,31 @@ type SidebarProps = {
 }
 
 type NavigationItem = {
-  description: string
   href: string
   icon: LucideIcon
-  label: string
+  translationKey: string
 }
 
 const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/patients",
-    label: "Patients",
-    description: "Clinic census and patient workflow queue.",
     icon: UsersRound,
+    translationKey: "patients",
   },
   {
     href: "/ward-map",
-    label: "Ward Map",
-    description: "Interactive room layout and patient bed placement board.",
     icon: LayoutGrid,
+    translationKey: "wardMap",
   },
   {
     href: "/visit",
-    label: "Visit & Print",
-    description: "Mobile rounds cards and A4 visit-sheet printing.",
     icon: Printer,
+    translationKey: "visit",
   },
   {
     href: "/settings",
-    label: "Settings",
-    description: "Tenant preferences, conventions, and clinic setup.",
     icon: Settings,
+    translationKey: "settings",
   },
 ]
 
@@ -57,6 +52,7 @@ function isNavigationItemActive(pathname: string, href: string): boolean {
 
 export function Sidebar({ className, onNavigate }: Readonly<SidebarProps>) {
   const pathname = usePathname()
+  const t = useTranslations("Sidebar")
 
   return (
     <aside className={cn("flex h-full flex-col bg-background print:hidden", className)}>
@@ -69,20 +65,20 @@ export function Sidebar({ className, onNavigate }: Readonly<SidebarProps>) {
           <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Building2 className="size-5" />
           </div>
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
               <span className="font-semibold tracking-tight">Med CMS</span>
               <Badge variant="outline">B2B</Badge>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Clinical tenant workspace
+            <p className="text-xs text-muted-foreground wrap-break-word text-wrap">
+              {t("workspaceSubtitle")}
             </p>
           </div>
         </Link>
       </div>
 
       <nav className="flex flex-1 flex-col gap-2 px-3 py-4">
-        {NAV_ITEMS.map(({ description, href, icon: Icon, label }) => {
+        {NAV_ITEMS.map(({ href, icon: Icon, translationKey }) => {
           const isActive = isNavigationItemActive(pathname, href)
 
           return (
@@ -99,10 +95,10 @@ export function Sidebar({ className, onNavigate }: Readonly<SidebarProps>) {
             >
               <div className="mb-1 flex items-center gap-2 text-sm font-medium">
                 <Icon className="size-4 text-primary" />
-                {label}
+                {t(`${translationKey}Label`)}
               </div>
-              <p className="text-xs leading-5 text-muted-foreground">
-                {description}
+              <p className="text-xs leading-5 text-muted-foreground wrap-break-word text-wrap">
+                {t(`${translationKey}Description`)}
               </p>
             </Link>
           )

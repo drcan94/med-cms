@@ -1,19 +1,18 @@
 import type { Doc } from "@/convex/_generated/dataModel"
 import { calculateClinicalDays } from "@/hooks/useClinicalDates"
 import type { WardRoom } from "@/lib/clinic-settings"
-import { buildWardRoomsWithBeds } from "@/lib/ward-layout"
+import { buildWardBedMetadata } from "@/lib/ward-layout"
 
 type PatientRecord = Doc<"patients">
 
 type BuildVisitSheetEntriesArgs = {
-  getFullPatientName: (initials: string, bedId: string) => string
+  getFullPatientName: (
+    initials: string,
+    bedId: string,
+    patientId?: PatientRecord["_id"]
+  ) => string
   patients: PatientRecord[]
   wardLayout: WardRoom[]
-}
-
-type BedMetadata = {
-  bedDisplay: string
-  order: number
 }
 
 export type VisitSheetEntry = {
@@ -33,36 +32,10 @@ function compareBedIds(leftBedId: string, rightBedId: string): number {
   })
 }
 
-function formatBedDisplay(roomName: string, bedLabel: string): string {
-  const normalizedRoomName = roomName.trim()
-  return normalizedRoomName ? `${normalizedRoomName} ${bedLabel}` : bedLabel
-}
-
-function buildWardBedMetadata(wardLayout: WardRoom[]): Map<string, BedMetadata> {
-  const bedMetadata = new Map<string, BedMetadata>()
-  let order = 0
-
-  for (const room of buildWardRoomsWithBeds(wardLayout)) {
-    for (const bed of room.beds) {
-      if (bedMetadata.has(bed.bedId)) {
-        continue
-      }
-
-      bedMetadata.set(bed.bedId, {
-        bedDisplay: formatBedDisplay(room.roomName, bed.bedLabel),
-        order,
-      })
-      order += 1
-    }
-  }
-
-  return bedMetadata
-}
-
 function comparePatients(
   leftPatient: PatientRecord,
   rightPatient: PatientRecord,
-  bedMetadata: Map<string, BedMetadata>
+  bedMetadata: ReturnType<typeof buildWardBedMetadata>
 ): number {
   const leftOrder = bedMetadata.get(leftPatient.bedId)?.order ?? Number.POSITIVE_INFINITY
   const rightOrder =
@@ -107,7 +80,7 @@ export function buildVisitSheetEntries({
           clinicalDays.postOpDays
         ),
         diagnosis: patient.diagnosis,
-        fullName: getFullPatientName(patient.initials, patient.bedId),
+        fullName: getFullPatientName(patient.initials, patient.bedId, patient._id),
         id: patient._id,
         initials: patient.initials,
       }

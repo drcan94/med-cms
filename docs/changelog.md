@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- Phase 10 i18n foundation with `next-intl`, locale-prefixed `en` and `tr` routes, message catalogs, and a dashboard language switcher.
+- Local patient-name persistence by `patientId`, allowing manual admission forms to keep full names browser-only while Convex stores only masked initials.
+- Optional `serviceName` support in the patient schema plus service display on ward-map patient cards.
 - Convex clinic settings validators plus a tenant-scoped query and upsert mutation for conventions and ward layout data.
 - A dedicated `/settings` workspace with General, Conventions, and Ward Map sections, including redirects from the legacy `/dashboard/*` settings routes.
 - A dynamic If/Then conventions builder powered by `react-hook-form`, `useFieldArray`, and `sonner` success feedback.
@@ -16,6 +19,10 @@ All notable changes to this project will be documented in this file.
 - Phase 8 billing infrastructure: Clerk organization webhooks, Iyzico checkout/callback routes, and a server-side Convex mutation bridge for secure subscription updates.
 
 ### Changed
+- Updated the manual patient sheet to capture full names locally, derive initials on save, and default unassigned admissions into a shared `STAGING` placement lane.
+- Reworked ward-map labels, toasts, and patient-card interactions so mobile users can tap cards to edit patients and see human-readable room and bed names instead of raw IDs.
+- Switched existing patient updates in Convex from `replace()` to `patch()` to reduce accidental overwrites during parallel clinician edits.
+- Tightened the settings layout with `min-w-0`, `break-words`, and related text-wrapping fixes to prevent squeezed cards on smaller screens.
 - Expanded protected route coverage and dashboard navigation to point at the new clinic settings workspace.
 - Updated the legacy `/dashboard/ward-map` route to redirect into the interactive `/ward-map` dashboard surface.
 - Updated the dashboard shell so the header and sidebar stay visible on screen but drop out during printing, leaving full-width visit-sheet output.

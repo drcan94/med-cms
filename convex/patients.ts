@@ -4,6 +4,7 @@ import {
   FREE_TRIAL_PATIENT_LIMIT,
   normalizeSubscriptionStatus,
 } from "../lib/commercial"
+import { STAGING_BED_ID } from "../lib/patient-privacy"
 import { internal } from "./_generated/api"
 import type { Doc } from "./_generated/dataModel"
 import { mutation, query } from "./_generated/server"
@@ -11,7 +12,13 @@ import { mutation, query } from "./_generated/server"
 type PatientRecord = Doc<"patients">
 type WritablePatientFields = Pick<
   PatientRecord,
-  "organizationId" | "initials" | "bedId" | "diagnosis" | "admissionDate" | "surgeryDate"
+  | "organizationId"
+  | "initials"
+  | "bedId"
+  | "diagnosis"
+  | "admissionDate"
+  | "surgeryDate"
+  | "serviceName"
 >
 
 function requireText(value: string, fieldName: string): string {
@@ -31,8 +38,10 @@ function sanitizePatientFields(args: {
   diagnosis: string
   admissionDate: string
   surgeryDate?: string
+  serviceName?: string
 }): WritablePatientFields {
   const surgeryDate = args.surgeryDate?.trim()
+  const serviceName = args.serviceName?.trim()
 
   return {
     organizationId: requireText(args.organizationId, "Organization"),
@@ -40,7 +49,8 @@ function sanitizePatientFields(args: {
     bedId: requireText(args.bedId, "Bed"),
     diagnosis: requireText(args.diagnosis, "Diagnosis"),
     admissionDate: requireText(args.admissionDate, "Admission date"),
-    ...(surgeryDate ? { surgeryDate } : {}),
+    surgeryDate: surgeryDate || undefined,
+    serviceName: serviceName || undefined,
   }
 }
 
@@ -92,18 +102,22 @@ export const upsertPatient = mutation({
     diagnosis: v.string(),
     admissionDate: v.string(),
     surgeryDate: v.optional(v.string()),
+    serviceName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const patientFields = sanitizePatientFields(args)
 
-    const conflictingBedAssignment = await ctx.db
-      .query("patients")
-      .withIndex("by_organization_bed_id", (queryBuilder) =>
-        queryBuilder
-          .eq("organizationId", patientFields.organizationId)
-          .eq("bedId", patientFields.bedId)
-      )
-      .unique()
+    const conflictingBedAssignment =
+      patientFields.bedId === STAGING_BED_ID
+        ? null
+        : await ctx.db
+            .query("patients")
+            .withIndex("by_organization_bed_id", (queryBuilder) =>
+              queryBuilder
+                .eq("organizationId", patientFields.organizationId)
+                .eq("bedId", patientFields.bedId)
+            )
+            .unique()
 
     if (
       conflictingBedAssignment &&
@@ -126,7 +140,7 @@ export const upsertPatient = mutation({
         throw new Error("You cannot update a patient outside your organization.")
       }
 
-      await ctx.db.replace(patientId, patientFields)
+      await ctx.db.patch(patientId, patientFields)
       action = `patient.updated:${patientFields.bedId}`
     } else {
       const [organization, patients] = await Promise.all([
@@ -193,12 +207,15 @@ export const updatePatientBed = mutation({
       throw new Error("You cannot move a patient outside your organization.")
     }
 
-    const conflictingBedAssignment = await ctx.db
-      .query("patients")
-      .withIndex("by_organization_bed_id", (queryBuilder) =>
-        queryBuilder.eq("organizationId", organizationId).eq("bedId", newBedId)
-      )
-      .unique()
+    const conflictingBedAssignment =
+      newBedId === STAGING_BED_ID
+        ? null
+        : await ctx.db
+            .query("patients")
+            .withIndex("by_organization_bed_id", (queryBuilder) =>
+              queryBuilder.eq("organizationId", organizationId).eq("bedId", newBedId)
+            )
+            .unique()
 
     if (conflictingBedAssignment && conflictingBedAssignment._id !== args.patientId) {
       throw new Error("That bed is already assigned to another patient.")

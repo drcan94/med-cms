@@ -1,7 +1,7 @@
 # Clinical Management SaaS Project Brief
 
 ## Overview
-A multi-tenant B2B clinical management SaaS for clinics, wards, and surgical teams. The platform is intended to provide a shared product foundation with tenant-specific workflows, ward layouts, and operational rules.
+A multi-tenant B2B clinical management SaaS for clinics, wards, and clinical teams across all services. The platform is intended to provide a shared product foundation with tenant-specific workflows, ward layouts, and operational rules.
 
 ## Core Goals
 - Support provider-level administration plus clinic-level ownership and staff roles.

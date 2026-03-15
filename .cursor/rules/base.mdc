@@ -29,3 +29,13 @@ You are an Expert Senior Full-Stack Developer specializing in Next.js 16 (App Ro
 
 # 5. Versioning & Logging
 - Maintain `docs/changelog.md` using Semantic Versioning (SemVer). Briefly log architectural decisions and completed phases.
+
+# 6. Internationalization (i18n)
+- Use `next-intl` for all text in the application.
+- The default language is English (`en`), with Turkish (`tr`) as the secondary language.
+- ALL new components, toasts, and UI elements MUST use translation keys (e.g., `t('dashboard.title')`) instead of hardcoded strings.
+
+# 7. UI/UX & Mobile Responsiveness
+- Prevent text overflow and UI squeezing. Use `text-wrap`, `break-words`, and appropriate flex/grid wrapping (`flex-wrap`, `min-w-0`) especially in Settings cards and sidebars.
+- Ensure all interactive elements (like Patient Cards in the Ward Map) are easily tappable on mobile devices to open their respective edit sheets.
+- Display Human-Readable IDs: Never show raw UUIDs (e.g., `room-123...`) in the UI or toasts. Always format them to human-readable text (e.g., "Room 101, Bed 1").

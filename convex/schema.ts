@@ -30,6 +30,7 @@ export default defineSchema({
     admissionDate: v.string(),
     surgeryDate: v.optional(v.string()),
     diagnosis: v.string(),
+    serviceName: v.optional(v.string()),
   })
     .index("by_organization_id", ["organizationId"])
     .index("by_organization_bed_id", ["organizationId", "bedId"]),

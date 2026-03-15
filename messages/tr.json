@@ -1,0 +1,58 @@
+{
+  "Header": {
+    "openSidebar": "Kenar çubuğu gezintisini aç",
+    "title": "Klinik Çalışma Alanı",
+    "subtitle": "Kliniğe özel pano temeli"
+  },
+  "LanguageSwitcher": {
+    "label": "Dil",
+    "en": "İngilizce",
+    "tr": "Türkçe"
+  },
+  "Sidebar": {
+    "workspaceSubtitle": "Kliniğe özel çalışma alanı",
+    "patientsLabel": "Hastalar",
+    "patientsDescription": "Klinik sayımı ve hasta iş akışı kuyruğu.",
+    "wardMapLabel": "Servis Haritası",
+    "wardMapDescription": "Etkileşimli oda yerleşimi ve hasta yatak planlama tahtası.",
+    "visitLabel": "Vizit ve Yazdır",
+    "visitDescription": "Mobil vizit kartları ve A4 vizit çizelgesi yazdırma.",
+    "settingsLabel": "Ayarlar",
+    "settingsDescription": "Klinik tercihleri, kurallar ve servis kurulumu."
+  },
+  "WardMap": {
+    "title": "Servis haritası",
+    "loadingOrganization": "Klinik bağlamı yükleniyor...",
+    "selectOrganization": "Etkileşimli servis yerleşimini yüklemek için bir klinik organizasyonu seçin.",
+    "loadingPlacements": "Odalar ve hasta yerleşimleri yükleniyor...",
+    "noLayoutTitle": "Servis yerleşimi henüz ayarlanmadı",
+    "noLayoutDescription": "Haritanın sürükle-bırak yatak alanlarını oluşturabilmesi için önce oda listesini kurun.",
+    "openWardLayoutEditor": "Servis yerleşimi düzenleyicisini aç",
+    "heroPhase": "Faz 10",
+    "heroBadge": "Etkileşimli Servis Haritası",
+    "heroTitle": "Servis yerleşim panosu",
+    "heroDescription": "Hasta kartlarını boş yataklara sürükleyin; güncel yerleşim Convex'e arkada kaydedilirken anında yerel geri bildirim alın.",
+    "rooms": "Odalar",
+    "beds": "Yataklar",
+    "patients": "Hastalar",
+    "placementTitle": "Yatak yerleştirmesi bekleyen hastalar",
+    "placementDescription": "Hasta henüz oluşturulan bir yatak kimliğiyle eşleşmiyorsa buradan sürükleyin.",
+    "placementEmpty": "Tüm hastalar şu anda ayarlı yataklara yerleştirilmiş durumda.",
+    "roomOccupancy": "{occupiedBeds} / {totalBeds} yatak dolu",
+    "roomBeds": "{count} yatak",
+    "bedOccupied": "Dolu",
+    "bedEmpty": "Boş",
+    "emptyBed": "Boş Yatak",
+    "localNameUnavailable": "Yerel roster adı henüz mevcut değil",
+    "diagnosis": "Tanı",
+    "service": "Servis",
+    "serviceUnset": "Servis belirtilmedi",
+    "daySummary": "Y{admittedDays} / PO{postOpDays}",
+    "toasts": {
+      "missingContext": "Hastaları taşımadan önce bir organizasyon seçip giriş yapın.",
+      "occupied": "Bu yatak zaten dolu.",
+      "moveSuccess": "{patientName} konumu {destination} olarak güncellendi.",
+      "moveError": "Hasta taşınamadı."
+    }
+  }
+}

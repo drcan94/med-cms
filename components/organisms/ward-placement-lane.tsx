@@ -1,6 +1,7 @@
 "use client"
 
 import { Droppable } from "@hello-pangea/dnd"
+import { useTranslations } from "next-intl"
 
 import type { Doc } from "@/convex/_generated/dataModel"
 import { WardPatientCard } from "@/components/molecules/ward-patient-card"
@@ -19,6 +20,7 @@ type WardPlacementLaneProps = {
   draggingEnabled?: boolean
   droppableId: string
   getPatientName: (patient: PatientRecord) => string
+  onSelectPatient?: (patient: PatientRecord) => void
   patients: PatientRecord[]
 }
 
@@ -26,15 +28,16 @@ export function WardPlacementLane({
   draggingEnabled = true,
   droppableId,
   getPatientName,
+  onSelectPatient,
   patients,
 }: Readonly<WardPlacementLaneProps>) {
+  const t = useTranslations("WardMap")
+
   return (
     <Card size="sm">
       <CardHeader>
-        <CardTitle>Patients needing bed placement</CardTitle>
-        <CardDescription>
-          Drag from here when a patient does not already match a generated bed ID.
-        </CardDescription>
+        <CardTitle>{t("placementTitle")}</CardTitle>
+        <CardDescription>{t("placementDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Droppable droppableId={droppableId} isDropDisabled={!draggingEnabled}>
@@ -54,12 +57,13 @@ export function WardPlacementLane({
                     key={patient._id}
                     fullName={getPatientName(patient)}
                     index={index}
+                    onSelectPatient={onSelectPatient}
                     patient={patient}
                   />
                 ))
               ) : (
                 <div className="flex items-center rounded-lg px-3 text-sm text-muted-foreground">
-                  All patients are currently placed into configured beds.
+                  {t("placementEmpty")}
                 </div>
               )}
               {provided.placeholder}

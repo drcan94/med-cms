@@ -1,27 +1,33 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import Link from "next/link"
+import { useState } from "react"
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { useAuth } from "@clerk/nextjs"
 import { useMutation, useQuery } from "convex/react"
+import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
 import { api } from "@/convex/_generated/api"
 import type { Doc } from "@/convex/_generated/dataModel"
+import { PatientSheet } from "@/components/organisms/patient-sheet"
 import { WardMapHero } from "@/components/organisms/ward-map-hero"
 import { WardPlacementLane } from "@/components/organisms/ward-placement-lane"
 import { WardRoom } from "@/components/organisms/ward-room"
+import { WardMapStateCard } from "@/components/organisms/ward-map-state-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Link } from "@/i18n/navigation"
 import { useLocalRoster } from "@/hooks/useLocalRoster"
 import { usePLGLimits } from "@/hooks/usePLGLimits"
-import { buildWardRoomsWithBeds } from "@/lib/ward-layout"
+import { useWardMapBoard } from "@/hooks/useWardMapBoard"
+import { formatPatientToastName } from "@/lib/patient-privacy"
+import { getReadableBedLabel } from "@/lib/ward-layout"
 
 type PatientRecord = Doc<"patients">
 
 const STAGING_DROPPABLE_ID = "ward-staging"
 
 export default function WardMapPage() {
+  const t = useTranslations("WardMap")
   const { getFullPatientName } = useLocalRoster()
   const { isLoaded, orgId, userId } = useAuth()
   const { isLocked } = usePLGLimits()
@@ -35,42 +41,33 @@ export default function WardMapPage() {
   ) as PatientRecord[] | undefined
   const updatePatientBed = useMutation(api.patients.updatePatientBed)
   const [optimisticBedIds, setOptimisticBedIds] = useState<Record<string, string>>({})
+  const [selectedPatient, setSelectedPatient] = useState<PatientRecord | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const {
+    bedIds,
+    bedMetadata,
+    displayPatients,
+    patientsByBed,
+    rooms,
+    stagingPatients,
+    totalBeds,
+  } = useWardMapBoard({
+    optimisticBedIds,
+    patients,
+    wardLayout: settings?.wardLayout ?? [],
+  })
 
-  const rooms = useMemo(
-    () => buildWardRoomsWithBeds(settings?.wardLayout ?? []),
-    [settings?.wardLayout]
-  )
-  const displayPatients = useMemo(
-    () =>
-      (patients ?? []).map((patient) => ({
-        ...patient,
-        bedId: optimisticBedIds[patient._id] ?? patient.bedId,
-      })),
-    [optimisticBedIds, patients]
-  )
-  const bedIds = useMemo(
-    () => new Set(rooms.flatMap((room) => room.beds.map((bed) => bed.bedId))),
-    [rooms]
-  )
-  const totalBeds = bedIds.size
-  const { patientsByBed, stagingPatients } = useMemo(() => {
-    const nextPatientsByBed = new Map<string, PatientRecord>()
-    const nextStagingPatients: PatientRecord[] = []
+  const getPatientName = (patient: PatientRecord) =>
+    getFullPatientName(patient.initials, patient.bedId, patient._id)
 
-    for (const patient of displayPatients) {
-      if (bedIds.has(patient.bedId) && !nextPatientsByBed.has(patient.bedId)) {
-        nextPatientsByBed.set(patient.bedId, patient)
-        continue
-      }
-
-      nextStagingPatients.push(patient)
+  const handleSelectPatient = (patient: PatientRecord): void => {
+    if (isLocked) {
+      return
     }
 
-    return {
-      patientsByBed: nextPatientsByBed,
-      stagingPatients: nextStagingPatients,
-    }
-  }, [bedIds, displayPatients])
+    setSelectedPatient(patient)
+    setSheetOpen(true)
+  }
 
   const movePatientToBed = async (
     patientId: string,
@@ -81,7 +78,7 @@ export default function WardMapPage() {
     }
 
     if (!orgId || !userId) {
-      toast.error("Select an organization and sign in before moving patients.")
+      toast.error(t("toasts.missingContext"))
       return
     }
 
@@ -99,7 +96,7 @@ export default function WardMapPage() {
           bedIds.has(record.bedId)
       )
     ) {
-      toast.error("That bed is already occupied.")
+      toast.error(t("toasts.occupied"))
       return
     }
 
@@ -118,14 +115,22 @@ export default function WardMapPage() {
         userId,
       })
 
-      toast.success(`${patient.initials} moved to ${destinationBedId}.`)
+      toast.success(
+        t("toasts.moveSuccess", {
+          patientName: formatPatientToastName(
+            getPatientName(patient),
+            patient.initials
+          ),
+          destination: getReadableBedLabel(bedMetadata, destinationBedId),
+        })
+      )
     } catch (error) {
       setOptimisticBedIds((currentBedIds) => ({
         ...currentBedIds,
         [patient._id]: previousBedId,
       }))
       toast.error(
-        error instanceof Error ? error.message : "Unable to move the patient."
+        error instanceof Error ? error.message : t("toasts.moveError")
       )
     }
   }
@@ -149,55 +154,30 @@ export default function WardMapPage() {
   }
 
   if (!isLoaded) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Ward map</CardTitle>
-          <CardDescription>Loading organization context...</CardDescription>
-        </CardHeader>
-      </Card>
-    )
+    return <WardMapStateCard title={t("title")} description={t("loadingOrganization")} />
   }
 
   if (!orgId) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Ward map</CardTitle>
-          <CardDescription>
-            Select a clinic organization to load the interactive ward layout.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    )
+    return <WardMapStateCard title={t("title")} description={t("selectOrganization")} />
   }
 
   if (settings === undefined || patients === undefined) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Ward map</CardTitle>
-          <CardDescription>Loading rooms and patient placements...</CardDescription>
-        </CardHeader>
-      </Card>
-    )
+    return <WardMapStateCard title={t("title")} description={t("loadingPlacements")} />
   }
 
   if (rooms.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>No ward layout configured</CardTitle>
-          <CardDescription>
-            Build the room list first so the map can generate droppable bed slots.
-          </CardDescription>
+          <CardTitle>{t("noLayoutTitle")}</CardTitle>
+          <CardDescription>{t("noLayoutDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Link
             href="/settings/ward-map"
             className="text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            Open ward layout editor
+            {t("openWardLayoutEditor")}
           </Link>
         </CardContent>
       </Card>
@@ -205,37 +185,51 @@ export default function WardMapPage() {
   }
 
   return (
-    <div className="grid gap-6">
-      <WardMapHero
-        patientCount={displayPatients.length}
-        roomCount={rooms.length}
-        totalBeds={totalBeds}
-      />
-
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <WardPlacementLane
-          draggingEnabled={!isLocked}
-          droppableId={STAGING_DROPPABLE_ID}
-          getPatientName={(patient) =>
-            getFullPatientName(patient.initials, patient.bedId)
-          }
-          patients={stagingPatients}
+    <>
+      <div className="grid gap-6">
+        <WardMapHero
+          patientCount={displayPatients.length}
+          roomCount={rooms.length}
+          totalBeds={totalBeds}
         />
 
-        <section className="grid gap-4 xl:grid-cols-2">
-          {rooms.map((room) => (
-            <WardRoom
-              draggingEnabled={!isLocked}
-              key={room.roomId}
-              getPatientName={(patient) =>
-                getFullPatientName(patient.initials, patient.bedId)
-              }
-              patientsByBed={patientsByBed}
-              room={room}
-            />
-          ))}
-        </section>
-      </DragDropContext>
-    </div>
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <WardPlacementLane
+            draggingEnabled={!isLocked}
+            droppableId={STAGING_DROPPABLE_ID}
+            getPatientName={getPatientName}
+            onSelectPatient={handleSelectPatient}
+            patients={stagingPatients}
+          />
+
+          <section className="grid gap-4 xl:grid-cols-2">
+            {rooms.map((room) => (
+              <WardRoom
+                draggingEnabled={!isLocked}
+                key={room.roomId}
+                getPatientName={getPatientName}
+                onSelectPatient={handleSelectPatient}
+                patientsByBed={patientsByBed}
+                room={room}
+              />
+            ))}
+          </section>
+        </DragDropContext>
+      </div>
+
+      <PatientSheet
+        open={!isLocked && sheetOpen}
+        onOpenChange={(nextOpen) => {
+          setSheetOpen(nextOpen)
+
+          if (!nextOpen) {
+            setSelectedPatient(null)
+          }
+        }}
+        organizationId={orgId}
+        patient={selectedPatient}
+        userId={userId}
+      />
+    </>
   )
 }

@@ -44,7 +44,8 @@ export function LocalSyncModal({
   const [lastImportedFile, setLastImportedFile] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState(DEFAULT_STATUS_MESSAGE)
   const [statusTone, setStatusTone] = useState<StatusTone>("default")
-  const { clearRoster, entryCount, setRoster } = useLocalRoster()
+  const { bedEntryCount, clearRoster, entryCount, patientEntryCount, setRoster } =
+    useLocalRoster()
 
   const handleDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -140,7 +141,7 @@ export function LocalSyncModal({
             <Badge variant="secondary">Local device only</Badge>
           </div>
           <DialogTitle>Secure local roster sync</DialogTitle>
-          <DialogDescription className="max-w-2xl leading-6">
+          <DialogDescription className="max-w-2xl wrap-break-word leading-6 text-wrap">
             Drop a hospital CSV to map `bedId` values to full patient names on
             this workstation. Data stays on this device and never enters Convex.
           </DialogDescription>
@@ -152,7 +153,7 @@ export function LocalSyncModal({
               <ShieldCheck className="size-4 text-primary" />
               Clinical privacy boundary
             </CardTitle>
-            <CardDescription className="leading-6">
+            <CardDescription className="wrap-break-word leading-6 text-wrap">
               The uploaded roster is stored only in browser LocalStorage. The
               backend remains limited to patient initials and operational data.
             </CardDescription>
@@ -189,9 +190,9 @@ export function LocalSyncModal({
           <Card size="sm">
             <CardHeader>
               <CardTitle>Local roster status</CardTitle>
-              <CardDescription>
+              <CardDescription className="wrap-break-word text-wrap">
                 {entryCount > 0
-                  ? `${entryCount} bed-to-name mappings are stored on this device.`
+                  ? `${bedEntryCount} imported bed mappings and ${patientEntryCount} manual patient mappings are stored on this device.`
                   : "No local patient roster has been synced yet."}
               </CardDescription>
             </CardHeader>
@@ -200,7 +201,7 @@ export function LocalSyncModal({
           <Card size="sm">
             <CardHeader>
               <CardTitle>Latest import</CardTitle>
-              <CardDescription>
+              <CardDescription className="wrap-break-word text-wrap">
                 {lastImportedFile
                   ? `${lastImportedFile} is the latest uploaded roster file.`
                   : "No CSV has been imported during this session."}

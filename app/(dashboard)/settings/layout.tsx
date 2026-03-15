@@ -18,19 +18,19 @@ export default function SettingsLayout({
   children,
 }: Readonly<SettingsLayoutProps>) {
   return (
-    <div className="grid gap-6">
+    <div className="grid min-w-0 gap-6">
       <section className="rounded-2xl border bg-background p-6 shadow-xs">
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">Phase 7</Badge>
             <Badge variant="secondary">PLG, Billing &amp; Tenant Controls</Badge>
           </div>
 
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <h1 className="text-3xl font-semibold tracking-tight">
               Clinic settings
             </h1>
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            <p className="max-w-3xl wrap-break-word text-sm leading-6 text-muted-foreground text-wrap">
               Configure tenant-specific conventions, ward structure, billing, and
               operational preferences for each clinic organization.
             </p>

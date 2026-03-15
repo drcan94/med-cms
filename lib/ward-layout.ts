@@ -16,6 +16,13 @@ export type WardBedSlot = {
   bedNumber: number
 }
 
+export type WardBedMetadata = WardBedSlot & {
+  bedDisplay: string
+  order: number
+  roomId: string
+  roomName: string
+}
+
 export type WardRoomWithBeds = WardRoom & {
   beds: WardBedSlot[]
 }
@@ -93,4 +100,42 @@ export function buildWardRoomsWithBeds(
       })),
     }
   })
+}
+
+export function formatBedDisplay(roomName: string, bedLabel: string): string {
+  const normalizedRoomName = roomName.trim()
+  return normalizedRoomName ? `${normalizedRoomName} - ${bedLabel}` : bedLabel
+}
+
+export function buildWardBedMetadata(
+  wardLayout: WardRoom[]
+): Map<string, WardBedMetadata> {
+  const bedMetadata = new Map<string, WardBedMetadata>()
+  let order = 0
+
+  for (const room of buildWardRoomsWithBeds(wardLayout)) {
+    for (const bed of room.beds) {
+      if (bedMetadata.has(bed.bedId)) {
+        continue
+      }
+
+      bedMetadata.set(bed.bedId, {
+        ...bed,
+        bedDisplay: formatBedDisplay(room.roomName, bed.bedLabel),
+        order,
+        roomId: room.roomId,
+        roomName: room.roomName,
+      })
+      order += 1
+    }
+  }
+
+  return bedMetadata
+}
+
+export function getReadableBedLabel(
+  bedMetadata: Map<string, WardBedMetadata>,
+  bedId: string
+): string {
+  return bedMetadata.get(bedId)?.bedDisplay ?? bedId
 }

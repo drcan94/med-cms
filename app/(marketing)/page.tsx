@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import {
   ArrowRight,
   FileText,
@@ -18,11 +17,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Link } from "@/i18n/navigation"
 
 export const metadata: Metadata = {
-  title: "WardOS | Mobile Surgical Rounds & Visit Sheets",
+  title: "WardOS | Mobile Clinical Rounds & Visit Sheets",
   description:
-    "WardOS helps surgical teams run mobile clinical rounds, real-time ward maps, and one-click visit-sheet printing without sending full patient names to the server.",
+    "WardOS helps clinical teams run mobile rounds, real-time ward maps, and one-click visit-sheet printing without sending full patient names to the server.",
 }
 
 const FEATURE_CARDS = [
@@ -72,7 +72,7 @@ export default function MarketingPage() {
                 sheets in one privacy-safe workspace.
               </h1>
               <p className="max-w-3xl text-base leading-8 text-muted-foreground sm:text-lg">
-                WardOS gives surgical teams a bedside-first operating system for
+                WardOS gives clinical teams a bedside-first operating system for
                 patient tracking. Run rounds on mobile, print a dense A4 visit
                 sheet in one click, and keep full patient names off the server by
                 design.
@@ -100,7 +100,7 @@ export default function MarketingPage() {
               <CardTitle>Built for rounds, not generic spreadsheets</CardTitle>
               <CardDescription>
                 WardOS combines bedside readability, print readiness, and
-                commercial self-serve onboarding for modern surgical teams.
+                commercial self-serve onboarding for modern clinical teams.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -131,7 +131,7 @@ export default function MarketingPage() {
           <div className="mx-auto max-w-3xl space-y-4">
             <Badge variant="outline">Start your clinic workspace</Badge>
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Launch WardOS for your surgical service today.
+              Launch WardOS across every clinical service today.
             </h2>
             <p className="text-base leading-7 text-muted-foreground">
               Start on the free tier, prove workflow value during rounds, then

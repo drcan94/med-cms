@@ -1,16 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { useMutation } from "convex/react"
-import { toast } from "sonner"
+import { useLocale } from "next-intl"
 
-import { api } from "@/convex/_generated/api"
 import type { Doc } from "@/convex/_generated/dataModel"
-import {
-  getInitialPatientFormState,
-  toClinicalIsoDate,
-  type PatientFormState,
-} from "@/lib/patient-form"
+import { usePatientSheetForm } from "@/hooks/usePatientSheetForm"
+import type { AppLocale } from "@/i18n/routing"
+import { generatePatientInitials } from "@/lib/patient-privacy"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,82 +38,18 @@ function PatientSheetForm({
   patient,
   userId,
 }: Readonly<PatientSheetFormProps>) {
-  const [formState, setFormState] = useState<PatientFormState>(() =>
-    getInitialPatientFormState(patient)
-  )
-  const [isSaving, setIsSaving] = useState(false)
-  const isEditing = Boolean(patient)
-  const upsertPatient = useMutation(api.patients.upsertPatient)
-
-  const handleFieldChange =
-    (field: keyof PatientFormState) =>
-    (
-      event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-    ): void => {
-      const { value } = event.target
-
-      setFormState((currentState) => ({
-        ...currentState,
-        [field]: value,
-      }))
-    }
-
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ): Promise<void> => {
-    event.preventDefault()
-
-    if (!organizationId || !userId) {
-      toast.error("Select an organization and sign in before saving patients.")
-      return
-    }
-
-    const initials = formState.initials.trim()
-    const bedId = formState.bedId.trim()
-    const diagnosis = formState.diagnosis.trim()
-    const admissionDate = formState.admissionDate.trim()
-    const surgeryDate = formState.surgeryDate.trim()
-
-    if (!initials || !bedId || !diagnosis || !admissionDate) {
-      toast.error("Bed, initials, diagnosis, and admission date are required.")
-      return
-    }
-
-    setIsSaving(true)
-
-    try {
-      await upsertPatient({
-        patientId: patient?._id,
-        organizationId,
-        userId,
-        initials,
-        bedId,
-        diagnosis,
-        admissionDate: toClinicalIsoDate(admissionDate),
-        surgeryDate: surgeryDate ? toClinicalIsoDate(surgeryDate) : undefined,
-      })
-
-      toast.success(
-        isEditing
-          ? "Patient workflow record updated."
-          : "Patient workflow record created."
-      )
-      onOpenChange(false)
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Unable to save the patient workflow record."
-
-      toast.error(
-        errorMessage === "TRIAL_LIMIT_REACHED"
-          ? "The free-trial patient limit has been reached. Upgrade to Premium to add more patients."
-          : errorMessage
-      )
-    } finally {
-      setIsSaving(false)
-    }
-  }
+  const locale = useLocale() as AppLocale
+  const { formState, handleFieldChange, handleSubmit, isEditing, isSaving } =
+    usePatientSheetForm({
+      onOpenChange,
+      organizationId,
+      patient,
+      userId,
+    })
+  const initialsPreview =
+    formState.fullName.trim().length > 0
+      ? generatePatientInitials(formState.fullName, locale)
+      : patient?.initials ?? ""
 
   return (
     <form onSubmit={handleSubmit} className="flex h-full flex-col">
@@ -131,30 +62,52 @@ function PatientSheetForm({
           {isEditing ? "Update patient workflow" : "Create patient workflow"}
         </SheetTitle>
         <SheetDescription className="leading-6">
-          Full patient names never enter Convex. Use initials here, then merge
-          bedside names locally through the roster sync workflow.
+          Full patient names never enter Convex. This form derives masked
+          initials locally and keeps the bedside name only in browser storage.
         </SheetDescription>
       </SheetHeader>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="bedId">Bed</Label>
+            <Label htmlFor="fullName">Full Name</Label>
             <Input
-              id="bedId"
-              value={formState.bedId}
-              onChange={handleFieldChange("bedId")}
-              placeholder="Room 2 / Bed 5"
+              id="fullName"
+              value={formState.fullName}
+              onChange={handleFieldChange("fullName")}
+              placeholder="Ali Aksoy"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="initials">Patient initials</Label>
+            <Label htmlFor="initials">Initials preview</Label>
             <Input
               id="initials"
-              value={formState.initials}
-              onChange={handleFieldChange("initials")}
+              value={initialsPreview}
               placeholder="A*** Y***"
+              readOnly
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="bedId">Bed (optional)</Label>
+            <Input
+              id="bedId"
+              value={formState.bedId}
+              onChange={handleFieldChange("bedId")}
+              placeholder="Room 101 - Bed 1"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="serviceName">Service / Ward</Label>
+            <Input
+              id="serviceName"
+              value={formState.serviceName}
+              onChange={handleFieldChange("serviceName")}
+              placeholder="Gogus Cerrahi"
             />
           </div>
         </div>
@@ -192,8 +145,8 @@ function PatientSheetForm({
         </div>
 
         <div className="rounded-xl border border-dashed px-4 py-3 text-xs leading-6 text-muted-foreground">
-          Local roster sync can overlay the full bedside name later using
-          browser storage, but this form intentionally persists only initials.
+          Full names stay in browser storage only. If no bed is selected, this
+          patient is staged for later placement on the ward board.
         </div>
       </div>
 

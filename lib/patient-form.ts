@@ -1,6 +1,7 @@
 import { format, formatISO, isValid, parseISO } from "date-fns"
 
 import type { Doc } from "@/convex/_generated/dataModel"
+import { STAGING_BED_ID } from "@/lib/patient-privacy"
 
 type PatientRecord = Doc<"patients">
 
@@ -8,7 +9,9 @@ export type PatientFormState = {
   admissionDate: string
   bedId: string
   diagnosis: string
+  fullName: string
   initials: string
+  serviceName: string
   surgeryDate: string
 }
 
@@ -27,13 +30,16 @@ export function toClinicalIsoDate(value: string): string {
 }
 
 export function getInitialPatientFormState(
-  patient: PatientRecord | null
+  patient: PatientRecord | null,
+  fullName = ""
 ): PatientFormState {
   return {
     admissionDate: formatDateForInput(patient?.admissionDate),
-    bedId: patient?.bedId ?? "",
+    bedId: patient?.bedId === STAGING_BED_ID ? "" : (patient?.bedId ?? ""),
     diagnosis: patient?.diagnosis ?? "",
+    fullName,
     initials: patient?.initials ?? "",
+    serviceName: patient?.serviceName ?? "",
     surgeryDate: formatDateForInput(patient?.surgeryDate),
   }
 }

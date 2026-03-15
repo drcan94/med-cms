@@ -3,6 +3,7 @@ import createMiddleware from "next-intl/middleware"
 import { NextResponse } from "next/server"
 
 import { routing } from "@/i18n/routing"
+import { getAuthPathnames, getLocaleFromPathname } from "@/lib/auth-paths"
 
 const handleI18nRouting = createMiddleware(routing)
 const PROTECTED_PATH_PREFIXES = [
@@ -33,16 +34,22 @@ function isProtectedPath(pathname: string): boolean {
 }
 
 export default clerkMiddleware(async (auth, request) => {
+  const pathname = request.nextUrl.pathname
+  const locale = getLocaleFromPathname(pathname)
   const unlocalizedPathname = removeLocalePrefix(request.nextUrl.pathname)
 
   if (isProtectedPath(unlocalizedPathname)) {
-    await auth.protect()
+    const { userId } = await auth()
+
+    if (!userId) {
+      const signInUrl = new URL(getAuthPathnames(locale).signIn, request.url)
+      signInUrl.searchParams.set("redirect_url", request.url)
+
+      return NextResponse.redirect(signInUrl)
+    }
   }
 
-  if (
-    request.nextUrl.pathname.startsWith("/api") ||
-    request.nextUrl.pathname.startsWith("/trpc")
-  ) {
+  if (pathname.startsWith("/api") || pathname.startsWith("/trpc")) {
     return NextResponse.next()
   }
 

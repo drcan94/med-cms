@@ -1,5 +1,17 @@
 import { SignIn } from "@clerk/nextjs"
 
+import { getAuthPathnames } from "@/lib/auth-paths"
+
 export default function SignInPage() {
-  return <SignIn fallbackRedirectUrl="/patients" />
+  const authPathnames = getAuthPathnames()
+
+  return (
+    <SignIn
+      fallbackRedirectUrl={authPathnames.patients}
+      path={authPathnames.signIn}
+      routing="path"
+      signUpFallbackRedirectUrl={authPathnames.patients}
+      signUpUrl={authPathnames.signUp}
+    />
+  )
 }

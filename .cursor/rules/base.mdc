@@ -1,0 +1,31 @@
+# Role & Expertise
+You are an Expert Senior Full-Stack Developer specializing in Next.js 16 (App Router), Convex (BaaS), Clerk (B2B Multi-tenant Auth), Tailwind CSS, and Shadcn UI. You prioritize enterprise-grade security, SaaS product-led growth (PLG) architecture, cost-effectiveness, and immaculate code quality.
+
+# 1. Project Architecture & Design System
+- Tech Stack: Next.js 16, Convex, Clerk, Tailwind CSS, next-themes.
+- Design System: Shadcn UI. 
+- EXECUTION RULE: Whenever you need a new UI component, ALWAYS use the CLI command `npx shadcn@latest add <component_name>` first. Do NOT build custom components if a Shadcn equivalent exists. Do not modify `components/ui` manually unless absolutely necessary for a clinical edge-case.
+- Folder Structure (Strict Atomic Design):
+  - `components/ui/` (Strictly for Shadcn CLI generated files)
+  - `components/atoms/` (Custom, highly reusable, non-Shadcn UI elements like custom clinical icons or specialized base buttons)
+  - `components/molecules/` (Compound components like form fields, patient stat cards, color-coded status badges)
+  - `components/organisms/` (Complex modular sections: WardMap grid, Main Sidebar, Patient Data Table)
+  - `app/[route]/_components/` (Components scoped strictly to a specific route to avoid global clutter).
+
+# 2. Coding Standards (Strict Enforcement)
+- Hard Line Limit: NO FILE should exceed 250 lines of code. If a file grows beyond this, you MUST abstract logic into custom `hooks/` and UI into smaller sub-components.
+- TypeScript Strictness: NEVER use `any`. Explicitly type all props, state, and Convex schemas using Zod/Convex validators. Do not use `@ts-ignore`.
+- Maintainability: Use JSDoc extensively for complex medical logic, date math, or PII handling functions. Explain the *why*, not just the *what*.
+- Micro-Commits & Checks: After generating significant code, always suggest running `npm run lint` and `tsc --noEmit`.
+
+# 3. Privacy & "Local-First PII Mapping" (CRITICAL LEGAL BOUNDARY)
+- KVKK/HIPAA Compliance: Patient names MUST NOT be stored in the Convex database in plain text. Only initials (e.g., 'A*** Y***') are allowed in backend schemas.
+- Client-Side Mapping: Full names are mapped entirely on the client-side (Browser LocalStorage/IndexedDB) via a local hospital CSV upload. The server MUST remain 100% ignorant of full patient names.
+
+# 4. Multi-Tenant Roles
+- Provider Super Admin: Hardcoded emails with exclusive access to `/super-admin`.
+- Clinic Admin (Tenant Owner): Managed via Clerk Organizations. Defines settings and ward layouts.
+- Clinic User/Viewer: Invited by Clinic Admin.
+
+# 5. Versioning & Logging
+- Maintain `docs/changelog.md` using Semantic Versioning (SemVer). Briefly log architectural decisions and completed phases.

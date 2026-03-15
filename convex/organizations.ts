@@ -1,0 +1,152 @@
+import { v } from "convex/values"
+
+import {
+  isSuperAdminAccount,
+  normalizeSubscriptionStatus,
+} from "../lib/commercial"
+import { internalMutation, query } from "./_generated/server"
+
+function requireText(value: string, fieldName: string): string {
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue) {
+    throw new Error(`${fieldName} is required.`)
+  }
+
+  return normalizedValue
+}
+
+export const getOrganizationByClerkId = query({
+  args: {
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const clerkId = requireText(args.clerkId, "Organization")
+    const organization = await ctx.db
+      .query("organizations")
+      .withIndex("by_clerk_id", (queryBuilder) => queryBuilder.eq("clerkId", clerkId))
+      .unique()
+
+    if (!organization) {
+      return null
+    }
+
+    return {
+      clerkId: organization.clerkId,
+      name: organization.name,
+      subscriptionStatus: normalizeSubscriptionStatus(
+        organization.subscriptionStatus
+      ),
+    }
+  },
+})
+
+export const getAllOrganizations = query({
+  args: {
+    userEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = requireText(args.userId, "User")
+
+    if (!isSuperAdminAccount({ userEmail: args.userEmail, userId })) {
+      throw new Error("Only the WardOS super admin can access organization billing data.")
+    }
+
+    const [organizations, patients] = await Promise.all([
+      ctx.db.query("organizations").collect(),
+      ctx.db.query("patients").collect(),
+    ])
+
+    const patientCountsByOrganization = patients.reduce<Map<string, number>>(
+      (counts, patient) => {
+        const currentCount = counts.get(patient.organizationId) ?? 0
+        counts.set(patient.organizationId, currentCount + 1)
+        return counts
+      },
+      new Map()
+    )
+
+    return organizations
+      .map((organization) => ({
+        clerkId: organization.clerkId,
+        name: organization.name,
+        patientCount: patientCountsByOrganization.get(organization.clerkId) ?? 0,
+        subscriptionStatus: normalizeSubscriptionStatus(
+          organization.subscriptionStatus
+        ),
+      }))
+      .sort((leftOrganization, rightOrganization) =>
+        leftOrganization.name.localeCompare(rightOrganization.name, undefined, {
+          sensitivity: "base",
+        })
+      )
+  },
+})
+
+export const upsertOrganizationFromClerkWebhook = internalMutation({
+  args: {
+    clerkId: v.string(),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const clerkId = requireText(args.clerkId, "Organization")
+    const name = requireText(args.name, "Organization name")
+    const existingOrganization = await ctx.db
+      .query("organizations")
+      .withIndex("by_clerk_id", (queryBuilder) => queryBuilder.eq("clerkId", clerkId))
+      .unique()
+
+    if (existingOrganization) {
+      await ctx.db.patch(existingOrganization._id, {
+        name,
+      })
+
+      return {
+        clerkId,
+        name,
+        subscriptionStatus: normalizeSubscriptionStatus(
+          existingOrganization.subscriptionStatus
+        ),
+      }
+    }
+
+    await ctx.db.insert("organizations", {
+      clerkId,
+      name,
+      subscriptionStatus: "trial",
+    })
+
+    return {
+      clerkId,
+      name,
+      subscriptionStatus: "trial",
+    }
+  },
+})
+
+export const updateSubscriptionStatus = internalMutation({
+  args: {
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const clerkId = requireText(args.clerkId, "Organization")
+    const organization = await ctx.db
+      .query("organizations")
+      .withIndex("by_clerk_id", (queryBuilder) => queryBuilder.eq("clerkId", clerkId))
+      .unique()
+
+    if (!organization) {
+      throw new Error("Organization record not found.")
+    }
+
+    await ctx.db.patch(organization._id, {
+      subscriptionStatus: "active",
+    })
+
+    return {
+      clerkId,
+      subscriptionStatus: "active",
+    }
+  },
+})

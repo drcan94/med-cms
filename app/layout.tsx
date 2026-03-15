@@ -7,6 +7,7 @@ import { getLocale, getMessages } from "next-intl/server"
 import { ConvexClientProvider } from "@/components/convex-client-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { getAuthPathnames } from "@/lib/auth-paths"
 import { cn } from "@/lib/utils"
 
 import "./globals.css"
@@ -35,9 +36,16 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const [locale, messages] = await Promise.all([getLocale(), getMessages()])
+  const authPathnames = getAuthPathnames(locale)
 
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      afterSignOutUrl={authPathnames.signIn}
+      signInFallbackRedirectUrl={authPathnames.patients}
+      signInUrl={authPathnames.signIn}
+      signUpFallbackRedirectUrl={authPathnames.patients}
+      signUpUrl={authPathnames.signUp}
+    >
       <html lang={locale} suppressHydrationWarning>
         <body
           className={cn(

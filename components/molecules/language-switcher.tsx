@@ -1,100 +1,59 @@
 "use client"
 
-import * as React from "react"
-
 import { Globe } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { usePathname, useRouter } from "@/i18n/navigation"
 import type { AppLocale } from "@/i18n/routing"
 import { routing } from "@/i18n/routing"
+import { cn } from "@/lib/utils"
 
 const LOCALE_SHORT_LABELS: Record<AppLocale, string> = {
   en: "EN",
   tr: "TR",
 }
 
-function getInternalPathname(pathname: string): string {
-  const matchedLocale = routing.locales.find(
-    (candidateLocale) =>
-      pathname === `/${candidateLocale}` ||
-      pathname.startsWith(`/${candidateLocale}/`)
-  )
-
-  if (!matchedLocale) {
-    return pathname
-  }
-
-  const pathnameWithoutLocale = pathname.slice(matchedLocale.length + 1)
-  return pathnameWithoutLocale.length > 0 ? pathnameWithoutLocale : "/"
+type LanguageSwitcherProps = {
+  className?: string
 }
 
-export function LanguageSwitcher() {
+function getNextLocale(locale: AppLocale): AppLocale {
+  const localeIndex = routing.locales.indexOf(locale)
+  return routing.locales[(localeIndex + 1) % routing.locales.length] as AppLocale
+}
+
+export function LanguageSwitcher({
+  className,
+}: Readonly<LanguageSwitcherProps>) {
   const t = useTranslations("LanguageSwitcher")
   const locale = useLocale() as AppLocale
   const pathname = usePathname()
   const router = useRouter()
-  const [isPending, startTransition] = React.useTransition()
+  const nextLocale = getNextLocale(locale)
 
-  const internalPathname = getInternalPathname(pathname)
-
-  const handleLocaleChange = (nextLocaleValue: string) => {
-    if (!routing.locales.includes(nextLocaleValue as AppLocale)) {
-      return
-    }
-
-    const nextLocale = nextLocaleValue as AppLocale
-
+  const handleLocaleChange = () => {
     if (nextLocale === locale) {
       return
     }
 
-    startTransition(() => {
-      router.replace(internalPathname, { locale: nextLocale })
-    })
+    router.replace(pathname, { locale: nextLocale })
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="h-9 rounded-full border border-border/70 bg-background/70 px-2.5 text-xs font-semibold uppercase shadow-sm transition-colors hover:bg-muted/60"
-          aria-label={`${t("label")}: ${t(locale)}`}
-          disabled={isPending}
-        >
-          <Globe className="size-4 text-muted-foreground" />
-          <span>{LOCALE_SHORT_LABELS[locale]}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuLabel>{t("label")}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={locale} onValueChange={handleLocaleChange}>
-          {routing.locales.map((candidateLocale) => (
-            <DropdownMenuRadioItem
-              key={candidateLocale}
-              value={candidateLocale}
-              className="gap-3 py-2"
-            >
-              <span className="w-8 text-xs font-semibold uppercase text-muted-foreground">
-                {LOCALE_SHORT_LABELS[candidateLocale]}
-              </span>
-              <span>{t(candidateLocale)}</span>
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      onClick={handleLocaleChange}
+      className={cn(
+        "h-8 rounded-full border border-border/70 bg-background/70 px-2 text-xs font-semibold uppercase shadow-sm transition-colors hover:bg-muted/60 sm:h-9 sm:px-2.5",
+        className
+      )}
+      aria-label={`${t("label")}: ${t(locale)}. ${t(nextLocale)}`}
+    >
+      <Globe className="size-4 text-muted-foreground" />
+      <span>{LOCALE_SHORT_LABELS[locale]}</span>
+    </Button>
   )
 }

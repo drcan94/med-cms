@@ -4,7 +4,6 @@ import { OrganizationSwitcher, UserButton } from "@clerk/nextjs"
 import { Building2, Menu } from "lucide-react"
 import { useTranslations } from "next-intl"
 
-import { HeaderActionsSheet } from "@/components/molecules/header-actions-sheet"
 import { LanguageSwitcher } from "@/components/molecules/language-switcher"
 import { ThemeToggle } from "@/components/molecules/theme-toggle"
 import { Button } from "@/components/ui/button"
@@ -18,18 +17,18 @@ const organizationSwitcherAppearance = {
   elements: {
     rootBox: "shrink-0",
     organizationSwitcherTrigger:
-      "h-9 rounded-full border border-border/70 bg-background/80 px-2 shadow-sm transition-colors hover:bg-muted/60 sm:px-3",
+      "h-8 rounded-full border border-border/70 bg-background/80 px-2 shadow-sm transition-colors hover:bg-muted/60 sm:h-9 sm:px-3",
     organizationPreview: "items-center gap-2",
     organizationPreviewMainIdentifier:
-      "hidden max-w-32 truncate text-sm sm:block",
+      "hidden max-w-32 truncate text-sm lg:block",
     organizationPreviewSecondaryIdentifier: "hidden",
-    organizationSwitcherTriggerIcon: "hidden sm:block text-muted-foreground",
+    organizationSwitcherTriggerIcon: "hidden lg:block text-muted-foreground",
   },
 }
 
 const userButtonAppearance = {
   elements: {
-    userButtonAvatarBox: "size-9",
+    userButtonAvatarBox: "size-8 sm:size-9",
   },
 }
 
@@ -65,15 +64,10 @@ export function Header({ onOpenSidebar }: Readonly<HeaderProps>) {
           </Link>
         </div>
 
-        <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-4">
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-2">
           <OrganizationSwitcher appearance={organizationSwitcherAppearance} />
-          <div className="hidden sm:block">
-            <LanguageSwitcher />
-          </div>
-          <div className="hidden sm:block">
-            <ThemeToggle />
-          </div>
-          <HeaderActionsSheet className="sm:hidden" />
+          <LanguageSwitcher />
+          <ThemeToggle className="size-8 sm:size-9" />
           <UserButton appearance={userButtonAppearance} />
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
 import createMiddleware from "next-intl/middleware"
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 import { routing } from "@/i18n/routing"
 import { getAuthPathnames, getLocaleFromPathname } from "@/lib/auth-paths"
@@ -33,32 +33,46 @@ function isProtectedPath(pathname: string): boolean {
   )
 }
 
+function getResolvedUrl(request: NextRequest, response: NextResponse): URL {
+  const rewrittenUrl =
+    response.headers.get("location") ??
+    response.headers.get("x-middleware-rewrite") ??
+    request.url
+
+  return new URL(rewrittenUrl, request.url)
+}
+
 export default clerkMiddleware(async (auth, request) => {
   const pathname = request.nextUrl.pathname
-  const locale = getLocaleFromPathname(pathname)
-  const unlocalizedPathname = removeLocalePrefix(request.nextUrl.pathname)
-
-  if (isProtectedPath(unlocalizedPathname)) {
-    const { userId } = await auth()
-
-    if (!userId) {
-      const signInUrl = new URL(getAuthPathnames(locale).signIn, request.url)
-      signInUrl.searchParams.set("redirect_url", request.url)
-
-      return NextResponse.redirect(signInUrl)
-    }
-  }
 
   if (pathname.startsWith("/api") || pathname.startsWith("/trpc")) {
     return NextResponse.next()
   }
 
-  return handleI18nRouting(request)
+  const i18nResponse = handleI18nRouting(request)
+  const resolvedUrl = getResolvedUrl(request, i18nResponse)
+  const locale = getLocaleFromPathname(resolvedUrl.pathname)
+  const unlocalizedPathname = removeLocalePrefix(resolvedUrl.pathname)
+
+  if (!isProtectedPath(unlocalizedPathname)) {
+    return i18nResponse
+  }
+
+  const { userId } = await auth()
+
+  if (userId) {
+    return i18nResponse
+  }
+
+  const signInUrl = new URL(getAuthPathnames(locale).signIn, request.url)
+  signInUrl.searchParams.set("redirect_url", resolvedUrl.toString())
+
+  return NextResponse.redirect(signInUrl)
 })
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!_next|_vercel|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
   ],
 }

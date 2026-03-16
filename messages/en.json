@@ -1,6 +1,8 @@
 {
   "Header": {
     "openSidebar": "Open sidebar navigation",
+    "openActions": "Open quick actions",
+    "themeLabel": "Theme",
     "title": "Clinical Workspace",
     "subtitle": "Tenant-aware dashboard foundation"
   },

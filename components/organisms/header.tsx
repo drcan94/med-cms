@@ -1,15 +1,36 @@
 "use client"
 
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs"
-import { Menu } from "lucide-react"
+import { Building2, Menu } from "lucide-react"
 import { useTranslations } from "next-intl"
 
+import { HeaderActionsSheet } from "@/components/molecules/header-actions-sheet"
 import { LanguageSwitcher } from "@/components/molecules/language-switcher"
 import { ThemeToggle } from "@/components/molecules/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { Link } from "@/i18n/navigation"
 
 type HeaderProps = {
   onOpenSidebar?: () => void
+}
+
+const organizationSwitcherAppearance = {
+  elements: {
+    rootBox: "shrink-0",
+    organizationSwitcherTrigger:
+      "h-9 rounded-full border border-border/70 bg-background/80 px-2 shadow-sm transition-colors hover:bg-muted/60 sm:px-3",
+    organizationPreview: "items-center gap-2",
+    organizationPreviewMainIdentifier:
+      "hidden max-w-32 truncate text-sm sm:block",
+    organizationPreviewSecondaryIdentifier: "hidden",
+    organizationSwitcherTriggerIcon: "hidden sm:block text-muted-foreground",
+  },
+}
+
+const userButtonAppearance = {
+  elements: {
+    userButtonAvatarBox: "size-9",
+  },
 }
 
 export function Header({ onOpenSidebar }: Readonly<HeaderProps>) {
@@ -17,34 +38,43 @@ export function Header({ onOpenSidebar }: Readonly<HeaderProps>) {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 print:hidden supports-backdrop-filter:bg-background/80 supports-backdrop-filter:backdrop-blur">
-      <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
           <Button
+            type="button"
             variant="outline"
             size="icon"
-            className="md:hidden"
+            className="shrink-0 md:hidden"
             onClick={onOpenSidebar}
             aria-label={t("openSidebar")}
           >
             <Menu className="size-4" />
           </Button>
-          <div className="min-w-0 space-y-0.5">
-            <p className="text-sm font-semibold tracking-tight">
-              {t("title")}
-            </p>
-            <p className="text-xs text-muted-foreground wrap-break-word text-wrap">
-              {t("subtitle")}
-            </p>
-          </div>
+          <Link href="/patients" className="flex min-w-0 items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Building2 className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold tracking-tight sm:text-base">
+                {t("title")}
+              </p>
+              <p className="hidden text-xs text-muted-foreground md:block">
+                {t("subtitle")}
+              </p>
+            </div>
+          </Link>
         </div>
 
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <div className="min-w-0 max-w-48">
-            <OrganizationSwitcher />
+        <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-4">
+          <OrganizationSwitcher appearance={organizationSwitcherAppearance} />
+          <div className="hidden sm:block">
+            <LanguageSwitcher />
           </div>
-          <LanguageSwitcher />
-          <ThemeToggle />
-          <UserButton />
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
+          <HeaderActionsSheet className="sm:hidden" />
+          <UserButton appearance={userButtonAppearance} />
         </div>
       </div>
     </header>

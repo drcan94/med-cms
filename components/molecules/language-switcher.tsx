@@ -1,49 +1,100 @@
 "use client"
 
+import * as React from "react"
+
+import { Globe } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { usePathname, useRouter } from "@/i18n/navigation"
 import type { AppLocale } from "@/i18n/routing"
 import { routing } from "@/i18n/routing"
-import { cn } from "@/lib/utils"
+
+const LOCALE_SHORT_LABELS: Record<AppLocale, string> = {
+  en: "EN",
+  tr: "TR",
+}
+
+function getInternalPathname(pathname: string): string {
+  const matchedLocale = routing.locales.find(
+    (candidateLocale) =>
+      pathname === `/${candidateLocale}` ||
+      pathname.startsWith(`/${candidateLocale}/`)
+  )
+
+  if (!matchedLocale) {
+    return pathname
+  }
+
+  const pathnameWithoutLocale = pathname.slice(matchedLocale.length + 1)
+  return pathnameWithoutLocale.length > 0 ? pathnameWithoutLocale : "/"
+}
 
 export function LanguageSwitcher() {
   const t = useTranslations("LanguageSwitcher")
   const locale = useLocale() as AppLocale
   const pathname = usePathname()
   const router = useRouter()
+  const [isPending, startTransition] = React.useTransition()
 
-  const handleLocaleChange = (nextLocale: AppLocale) => {
+  const internalPathname = getInternalPathname(pathname)
+
+  const handleLocaleChange = (nextLocaleValue: string) => {
+    if (!routing.locales.includes(nextLocaleValue as AppLocale)) {
+      return
+    }
+
+    const nextLocale = nextLocaleValue as AppLocale
+
     if (nextLocale === locale) {
       return
     }
 
-    router.replace(pathname, { locale: nextLocale })
+    startTransition(() => {
+      router.replace(internalPathname, { locale: nextLocale })
+    })
   }
 
   return (
-    <div
-      role="group"
-      aria-label={t("label")}
-      className="flex items-center rounded-lg border p-1"
-    >
-      {routing.locales.map((candidateLocale) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <Button
-          key={candidateLocale}
           type="button"
           size="sm"
           variant="ghost"
-          onClick={() => handleLocaleChange(candidateLocale)}
-          className={cn(
-            "h-8 px-2 text-xs font-semibold uppercase",
-            candidateLocale === locale && "bg-muted text-foreground"
-          )}
-          aria-pressed={candidateLocale === locale}
+          className="h-9 rounded-full border border-border/70 bg-background/70 px-2.5 text-xs font-semibold uppercase shadow-sm transition-colors hover:bg-muted/60"
+          aria-label={`${t("label")}: ${t(locale)}`}
+          disabled={isPending}
         >
-          {t(candidateLocale)}
+          <Globe className="size-4 text-muted-foreground" />
+          <span>{LOCALE_SHORT_LABELS[locale]}</span>
         </Button>
-      ))}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuLabel>{t("label")}</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={locale} onValueChange={handleLocaleChange}>
+          {routing.locales.map((candidateLocale) => (
+            <DropdownMenuRadioItem
+              key={candidateLocale}
+              value={candidateLocale}
+              className="gap-3 py-2"
+            >
+              <span className="w-8 text-xs font-semibold uppercase text-muted-foreground">
+                {LOCALE_SHORT_LABELS[candidateLocale]}
+              </span>
+              <span>{t(candidateLocale)}</span>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

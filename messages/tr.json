@@ -1,6 +1,8 @@
 {
   "Header": {
     "openSidebar": "Kenar çubuğu gezintisini aç",
+    "openActions": "Hızlı işlemleri aç",
+    "themeLabel": "Tema",
     "title": "Klinik Çalışma Alanı",
     "subtitle": "Kliniğe özel pano temeli"
   },

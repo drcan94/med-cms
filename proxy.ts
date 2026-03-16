@@ -3,7 +3,7 @@ import createMiddleware from "next-intl/middleware"
 import { type NextRequest, NextResponse } from "next/server"
 
 import { routing } from "@/i18n/routing"
-import { getAuthPathnames, getLocaleFromPathname } from "@/lib/auth-paths"
+import { getAuthPathnames, getLocaleFromPathname, stripLocalePrefix } from "@/lib/auth-paths"
 
 const handleI18nRouting = createMiddleware(routing)
 const PROTECTED_PATH_PREFIXES = [
@@ -14,18 +14,6 @@ const PROTECTED_PATH_PREFIXES = [
   "/super-admin",
   "/ward-map",
 ]
-
-function removeLocalePrefix(pathname: string): string {
-  const segments = pathname.split("/")
-  const locale = segments[1]
-
-  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
-    return pathname
-  }
-
-  const unlocalizedPathname = pathname.slice(locale.length + 1)
-  return unlocalizedPathname || "/"
-}
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATH_PREFIXES.some(
@@ -52,7 +40,7 @@ export default clerkMiddleware(async (auth, request) => {
   const i18nResponse = handleI18nRouting(request)
   const resolvedUrl = getResolvedUrl(request, i18nResponse)
   const locale = getLocaleFromPathname(resolvedUrl.pathname)
-  const unlocalizedPathname = removeLocalePrefix(resolvedUrl.pathname)
+  const unlocalizedPathname = stripLocalePrefix(resolvedUrl.pathname)
 
   if (!isProtectedPath(unlocalizedPathname)) {
     return i18nResponse

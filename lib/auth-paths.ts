@@ -3,6 +3,14 @@ import { hasLocale } from "next-intl"
 import type { AppLocale } from "@/i18n/routing"
 import { routing } from "@/i18n/routing"
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+const LOCALE_PREFIX_PATTERN = new RegExp(
+  `^(?:/(?:${routing.locales.map(escapeRegExp).join("|")}))+(?=/|$)`
+)
+
 export function getLocaleFromPathname(pathname: string): AppLocale {
   const localeSegment = pathname.split("/")[1]
 
@@ -11,8 +19,18 @@ export function getLocaleFromPathname(pathname: string): AppLocale {
     : routing.defaultLocale
 }
 
+export function stripLocalePrefix(pathname: string): string {
+  const unlocalizedPathname = pathname.replace(LOCALE_PREFIX_PATTERN, "")
+  return unlocalizedPathname || "/"
+}
+
 export function getLocalizedPathname(pathname: string, locale?: string): string {
-  return hasLocale(routing.locales, locale) ? `/${locale}${pathname}` : pathname
+  if (!hasLocale(routing.locales, locale)) {
+    return pathname
+  }
+
+  const cleanPathname = stripLocalePrefix(pathname)
+  return cleanPathname === "/" ? `/${locale}` : `/${locale}${cleanPathname}`
 }
 
 export function getAuthPathnames(locale?: string) {

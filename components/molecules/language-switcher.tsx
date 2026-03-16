@@ -2,17 +2,13 @@
 
 import { Globe, Loader2Icon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
-import {
-  type ReadonlyURLSearchParams,
-  useParams,
-  useSearchParams,
-} from "next/navigation"
+import { type ReadonlyURLSearchParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { usePathname, useRouter } from "@/i18n/navigation"
 import type { AppLocale } from "@/i18n/routing"
 import { routing } from "@/i18n/routing"
+import { stripLocalePrefix } from "@/lib/auth-paths"
 import { cn } from "@/lib/utils"
 
 const LOCALE_SHORT_LABELS: Record<AppLocale, string> = {
@@ -29,30 +25,16 @@ function getNextLocale(locale: AppLocale): AppLocale {
   return routing.locales[(localeIndex + 1) % routing.locales.length] as AppLocale
 }
 
-type SearchQuery = Record<string, string | Array<string>>
-
-function getQueryFromSearchParams(
+function getLocalizedHref(
+  pathname: string,
+  locale: AppLocale,
   searchParams: ReadonlyURLSearchParams
-): SearchQuery | undefined {
-  const query: SearchQuery = {}
+): string {
+  const cleanPathname = stripLocalePrefix(pathname)
+  const localizedPathname = cleanPathname === "/" ? `/${locale}` : `/${locale}${cleanPathname}`
+  const queryString = searchParams.toString()
 
-  for (const [key, value] of searchParams.entries()) {
-    const existingValue = query[key]
-
-    if (existingValue === undefined) {
-      query[key] = value
-      continue
-    }
-
-    if (Array.isArray(existingValue)) {
-      existingValue.push(value)
-      continue
-    }
-
-    query[key] = [existingValue, value]
-  }
-
-  return Object.keys(query).length > 0 ? query : undefined
+  return queryString ? `${localizedPathname}?${queryString}` : localizedPathname
 }
 
 export function LanguageSwitcher({
@@ -61,7 +43,6 @@ export function LanguageSwitcher({
   const t = useTranslations("LanguageSwitcher")
   const locale = useLocale() as AppLocale
   const pathname = usePathname()
-  const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
@@ -72,30 +53,11 @@ export function LanguageSwitcher({
       return
     }
 
-    const query = getQueryFromSearchParams(searchParams)
+    const nextPathname = getLocalizedHref(pathname, nextLocale, searchParams)
 
     startTransition(() => {
-      if (pathname.includes("[")) {
-        if (query === undefined) {
-          router.replace(
-            // @ts-expect-error -- The current route params always match the current pathname.
-            { pathname, params },
-            { locale: nextLocale }
-          )
-          return
-        }
-
-        router.replace(
-          // @ts-expect-error -- The current route params always match the current pathname.
-          { pathname, params, query },
-          { locale: nextLocale }
-        )
-        return
-      }
-
-      router.replace(query === undefined ? pathname : { pathname, query }, {
-        locale: nextLocale,
-      })
+      router.replace(nextPathname)
+      router.refresh()
     })
   }
 

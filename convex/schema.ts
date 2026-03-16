@@ -8,7 +8,8 @@ import {
 
 /**
  * Convex adds `_id` and `_creationTime` to every document automatically.
- * Patient full names never enter this schema; only `initials` are persisted.
+ * Patient full names never enter this schema; only masked initials and a 4-character
+ * identifier code are persisted for local disambiguation.
  */
 export default defineSchema({
   organizations: defineTable({
@@ -26,6 +27,7 @@ export default defineSchema({
   patients: defineTable({
     organizationId: v.string(),
     initials: v.string(),
+    identifierCode: v.string(),
     bedId: v.string(),
     admissionDate: v.string(),
     surgeryDate: v.optional(v.string()),

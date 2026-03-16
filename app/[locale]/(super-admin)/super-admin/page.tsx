@@ -2,6 +2,7 @@
 
 import { useUser } from "@clerk/nextjs"
 import { useQuery } from "convex/react"
+import { useTranslations } from "next-intl"
 
 import { api } from "@/convex/_generated/api"
 import { Badge } from "@/components/ui/badge"
@@ -22,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  formatSubscriptionStatusLabel,
+  getSubscriptionStatusKey,
   isSuperAdminAccount,
 } from "@/lib/commercial"
 
@@ -39,15 +40,16 @@ function getSubscriptionBadgeVariant(subscriptionStatus: string) {
 }
 
 function SuperAdminStateCard({
+  badgeLabel,
   description,
   title,
-}: Readonly<{ description: string; title: string }>) {
+}: Readonly<{ badgeLabel: string; description: string; title: string }>) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-16">
       <Card className="w-full">
         <CardHeader>
           <Badge variant="outline" className="w-fit">
-            Provider admin
+            {badgeLabel}
           </Badge>
           <CardTitle>{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
@@ -58,6 +60,7 @@ function SuperAdminStateCard({
 }
 
 export default function SuperAdminPage() {
+  const t = useTranslations("SuperAdminPage")
   const { isLoaded, user } = useUser()
   const userId = user?.id
   const userEmail = user?.primaryEmailAddress?.emailAddress
@@ -70,8 +73,9 @@ export default function SuperAdminPage() {
   if (!isLoaded) {
     return (
       <SuperAdminStateCard
-        title="SaaS provider admin panel"
-        description="Loading platform oversight data..."
+        badgeLabel={t("state.badge")}
+        title={t("state.loadingTitle")}
+        description={t("state.loadingDescription")}
       />
     )
   }
@@ -79,8 +83,9 @@ export default function SuperAdminPage() {
   if (!canAccess) {
     return (
       <SuperAdminStateCard
-        title="Restricted provider workspace"
-        description="This route is reserved for the WardOS super admin account."
+        badgeLabel={t("state.badge")}
+        title={t("state.restrictedTitle")}
+        description={t("state.restrictedDescription")}
       />
     )
   }
@@ -88,8 +93,9 @@ export default function SuperAdminPage() {
   if (organizations === undefined) {
     return (
       <SuperAdminStateCard
-        title="SaaS provider admin panel"
-        description="Loading organization billing and patient metrics..."
+        badgeLabel={t("state.badge")}
+        title={t("state.loadingTitle")}
+        description={t("state.loadingMetrics")}
       />
     )
   }
@@ -107,35 +113,32 @@ export default function SuperAdminPage() {
       <div className="grid w-full gap-6">
         <section className="rounded-2xl border bg-background p-6 shadow-xs">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">Super Admin</Badge>
-            <Badge variant="secondary">Commercial oversight</Badge>
+            <Badge variant="outline">{t("badges.title")}</Badge>
+            <Badge variant="secondary">{t("badges.subtitle")}</Badge>
           </div>
           <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight">
-                WardOS tenant dashboard
-              </h1>
+              <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                Review clinic usage, subscription health, and PLG conversion signals
-                across the entire commercial footprint.
+                {t("description")}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl border px-4 py-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Clinics
+                  {t("metrics.clinics")}
                 </p>
                 <p className="mt-2 text-2xl font-semibold">{organizations.length}</p>
               </div>
               <div className="rounded-xl border px-4 py-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Active
+                  {t("metrics.active")}
                 </p>
                 <p className="mt-2 text-2xl font-semibold">{activeOrganizations}</p>
               </div>
               <div className="rounded-xl border px-4 py-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Patients
+                  {t("metrics.patients")}
                 </p>
                 <p className="mt-2 text-2xl font-semibold">{totalPatients}</p>
               </div>
@@ -145,25 +148,22 @@ export default function SuperAdminPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Tenant clinics</CardTitle>
-            <CardDescription>
-              All organizations, commercial status, and live patient counts from
-              the product-led growth layer.
-            </CardDescription>
+            <CardTitle>{t("table.title")}</CardTitle>
+            <CardDescription>{t("table.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableCaption>
                 {organizations.length > 0
-                  ? "Commercial overview across all tenant clinics."
-                  : "No organizations have been provisioned yet."}
+                  ? t("table.caption")
+                  : t("table.emptyCaption")}
               </TableCaption>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Clinic</TableHead>
-                  <TableHead>Clerk Org ID</TableHead>
-                  <TableHead>Patients</TableHead>
-                  <TableHead>Subscription</TableHead>
+                  <TableHead>{t("table.headers.clinic")}</TableHead>
+                  <TableHead>{t("table.headers.clerkOrgId")}</TableHead>
+                  <TableHead>{t("table.headers.patients")}</TableHead>
+                  <TableHead>{t("table.headers.subscription")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -180,8 +180,10 @@ export default function SuperAdminPage() {
                           organization.subscriptionStatus
                         )}
                       >
-                        {formatSubscriptionStatusLabel(
-                          organization.subscriptionStatus
+                        {t(
+                          `statuses.${getSubscriptionStatusKey(
+                            organization.subscriptionStatus
+                          )}`
                         )}
                       </Badge>
                     </TableCell>

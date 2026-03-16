@@ -2,6 +2,7 @@
 
 import type { UseFormRegister } from "react-hook-form"
 import { Trash2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 import {
   CONVENTION_SOURCE_OPTIONS,
@@ -39,10 +40,14 @@ export function RuleBuilderRow({
   register,
   sourceField,
 }: Readonly<RuleBuilderRowProps>) {
+  const t = useTranslations("RuleBuilderRow")
   const baseFieldName = `rules.${index}` as const
-  const selectedSourceOption = CONVENTION_SOURCE_OPTIONS.find(
-    (option) => option.value === sourceField
-  )
+  const sourceOptions = CONVENTION_SOURCE_OPTIONS.map((option) => ({
+    ...option,
+    description: t(`sourceOptions.${option.value}.description`),
+    label: t(`sourceOptions.${option.value}.label`),
+  }))
+  const selectedSourceOption = sourceOptions.find((option) => option.value === sourceField)
   const matchValueInputId = `rule-${index}-match-value`
   const checklistItemInputId = `rule-${index}-checklist-item`
 
@@ -52,18 +57,16 @@ export function RuleBuilderRow({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge variant="outline">Rule {index + 1}</Badge>
-              <Badge variant="secondary">IF / THEN</Badge>
+              <Badge variant="outline">{t("ruleBadge", { number: index + 1 })}</Badge>
+              <Badge variant="secondary">{t("ifThenBadge")}</Badge>
             </div>
-            <CardTitle>Clinical requirement trigger</CardTitle>
-            <CardDescription>
-              Match workflow requirements against diagnosis or surgery text.
-            </CardDescription>
+            <CardTitle>{t("title")}</CardTitle>
+            <CardDescription>{t("description")}</CardDescription>
           </div>
 
           <Button type="button" variant="outline" size="sm" onClick={onRemove}>
             <Trash2 className="size-4" />
-            Remove
+            {t("actions.remove")}
           </Button>
         </div>
       </CardHeader>
@@ -75,14 +78,12 @@ export function RuleBuilderRow({
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">IF</Badge>
-            <span className="text-sm text-muted-foreground">
-              choose the clinical note field to inspect
-            </span>
+            <Badge variant="outline">{t("ifBadge")}</Badge>
+            <span className="text-sm text-muted-foreground">{t("sourceFieldHint")}</span>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {CONVENTION_SOURCE_OPTIONS.map((option) => (
+            {sourceOptions.map((option) => (
               <Button
                 key={option.value}
                 type="button"
@@ -102,14 +103,14 @@ export function RuleBuilderRow({
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor={matchValueInputId}>contains</Label>
+            <Label htmlFor={matchValueInputId}>{t("fields.matchValue.label")}</Label>
             <Input
               id={matchValueInputId}
               aria-invalid={Boolean(matchValueError)}
-              placeholder="hip fracture, CABG, ORIF, etc."
+              placeholder={t("fields.matchValue.placeholder")}
               {...register(`${baseFieldName}.matchValue`, {
                 validate: (value) =>
-                  value.trim().length > 0 || "Enter text to match.",
+                  value.trim().length > 0 || t("fields.matchValue.error"),
               })}
             />
             {matchValueError ? (
@@ -118,14 +119,16 @@ export function RuleBuilderRow({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={checklistItemInputId}>THEN require</Label>
+            <Label htmlFor={checklistItemInputId}>
+              {t("fields.checklistItem.label")}
+            </Label>
             <Input
               id={checklistItemInputId}
               aria-invalid={Boolean(checklistItemError)}
-              placeholder="VTE prophylaxis checklist"
+              placeholder={t("fields.checklistItem.placeholder")}
               {...register(`${baseFieldName}.checklistItem`, {
                 validate: (value) =>
-                  value.trim().length > 0 || "Enter a checklist requirement.",
+                  value.trim().length > 0 || t("fields.checklistItem.error"),
               })}
             />
             {checklistItemError ? (

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useSyncExternalStore } from "react"
+import { buildPatientIdentityKey } from "@/lib/patient-identity"
 
 export const LOCAL_ROSTER_STORAGE_KEY = "wardos_local_roster"
 const LOCAL_ROSTER_CHANGE_EVENT = "wardos-local-roster-change"
@@ -9,6 +10,17 @@ export type LocalRoster = Record<string, string>
 type LocalRosterStore = {
   bedRoster: LocalRoster
   patientRoster: LocalRoster
+}
+type PatientNameLookup = {
+  bedId: string
+  identifierCode?: string
+  initials: string
+  patientId?: string
+}
+type SetPatientNameArgs = {
+  fullName: string
+  identifierCode: string
+  initials: string
 }
 
 const EMPTY_ROSTER: LocalRoster = {}
@@ -29,10 +41,35 @@ function normalizeRosterKey(key: string): string {
   return normalizeValue(key)
 }
 
+function resolveStoredPatientName(
+  rosterStore: LocalRosterStore,
+  lookup: PatientNameLookup
+): string | undefined {
+  const identityKey = buildPatientIdentityKey(
+    lookup.initials,
+    lookup.identifierCode ?? ""
+  )
+  const normalizedIdentityKey = identityKey ? normalizeRosterKey(identityKey) : null
+  const normalizedPatientId = lookup.patientId
+    ? normalizeRosterKey(lookup.patientId)
+    : null
+  const normalizedBedId = normalizeRosterKey(lookup.bedId)
+
+  return (
+    (normalizedIdentityKey
+      ? rosterStore.patientRoster[normalizedIdentityKey]
+      : undefined) ??
+    (normalizedPatientId ? rosterStore.patientRoster[normalizedPatientId] : undefined) ??
+    (normalizedIdentityKey ? rosterStore.bedRoster[normalizedIdentityKey] : undefined) ??
+    (normalizedBedId ? rosterStore.bedRoster[normalizedBedId] : undefined)
+  )
+}
+
 /**
- * Browser-local PII comes from two sources: uploaded bed rosters and manually
- * entered patient names. Both stores are normalized so the UI can reconcile
- * full names without ever sending them to Convex.
+ * Browser-local PII comes from imported roster rows and manually entered names.
+ * Imported CSV data may key by `bedId` or by a de-identified `initials + last4`
+ * identity pair so staged patients can still resolve to the correct full name
+ * without ever sending plaintext PII to Convex.
  */
 function sanitizeRoster(data: LocalRoster): LocalRoster {
   return Object.entries(data).reduce<LocalRoster>((nextRoster, [key, fullName]) => {
@@ -143,11 +180,11 @@ export function useLocalRoster() {
   }, [rosterStore.patientRoster])
 
   const setPatientName = useCallback(
-    (patientId: string, fullName: string) => {
-      const normalizedPatientId = normalizeRosterKey(patientId)
+    ({ fullName, identifierCode, initials }: SetPatientNameArgs) => {
+      const identityKey = buildPatientIdentityKey(initials, identifierCode)
       const normalizedFullName = normalizeValue(fullName)
 
-      if (!normalizedPatientId || !normalizedFullName || typeof window === "undefined") {
+      if (!identityKey || !normalizedFullName || typeof window === "undefined") {
         return
       }
 
@@ -157,7 +194,7 @@ export function useLocalRoster() {
           bedRoster: rosterStore.bedRoster,
           patientRoster: {
             ...rosterStore.patientRoster,
-            [normalizedPatientId]: normalizedFullName,
+            [normalizeRosterKey(identityKey)]: normalizedFullName,
           },
         } satisfies LocalRosterStore)
       )
@@ -173,22 +210,21 @@ export function useLocalRoster() {
     }
   }, [])
 
-  const getFullPatientName = useCallback(
-    (initials: string, bedId: string, patientId?: string) => {
-      const localNameByPatientId = patientId
-        ? rosterStore.patientRoster[normalizeRosterKey(patientId)]
-        : undefined
-      const localNameByBed = rosterStore.bedRoster[normalizeRosterKey(bedId)]
-      const localName = localNameByPatientId ?? localNameByBed
+  const getLocalPatientName = useCallback(
+    (lookup: PatientNameLookup) => resolveStoredPatientName(rosterStore, lookup) ?? "",
+    [rosterStore]
+  )
 
-      return localName ?? normalizeValue(initials)
+  const getFullPatientName = useCallback(
+    (lookup: PatientNameLookup) => {
+      const localName = getLocalPatientName(lookup)
+      return localName || normalizeValue(lookup.initials)
     },
-    [rosterStore.bedRoster, rosterStore.patientRoster]
+    [getLocalPatientName]
   )
 
   return {
     roster: rosterStore.bedRoster,
-    patientRoster: rosterStore.patientRoster,
     bedEntryCount: Object.keys(rosterStore.bedRoster).length,
     patientEntryCount: Object.keys(rosterStore.patientRoster).length,
     entryCount:
@@ -197,6 +233,7 @@ export function useLocalRoster() {
     setRoster,
     setPatientName,
     clearRoster,
+    getLocalPatientName,
     getFullPatientName,
   }
 }

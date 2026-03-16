@@ -2,18 +2,14 @@
 
 import { useCallback, useState } from "react"
 import { CheckCircle2, FileSpreadsheet, ShieldCheck, Trash2, UploadCloud } from "lucide-react"
+import { useTranslations } from "next-intl"
 import Papa from "papaparse"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -28,21 +24,36 @@ import { buildRosterFromCsv } from "@/lib/local-roster-csv"
 import { cn } from "@/lib/utils"
 
 type StatusTone = "default" | "error" | "success"
+type LocalSyncModalProps = { triggerLabel?: string }
 
-type LocalSyncModalProps = {
-  triggerLabel?: string
+function getLocalSyncErrorMessage(
+  error: unknown,
+  t: (key: string, values?: Record<string, string | number>) => string
+): string {
+  if (!(error instanceof Error)) {
+    return t("errors.syncFailed")
+  }
+
+  switch (error.message) {
+    case "CSV_PARSE_FAILED":
+      return t("errors.parseFailed")
+    case 'CSV must include "Patient Name" plus either "Bed Number" or both "Initials" and "Identifier Code" columns.':
+      return t("errors.missingColumns")
+    case "No valid patient rows were found in the uploaded CSV.":
+      return t("errors.noValidRows")
+    default:
+      return error.message
+  }
 }
 
-const DEFAULT_STATUS_MESSAGE =
-  'Upload a CSV with headers like "Bed Number" and "Patient Name".'
-
-export function LocalSyncModal({
-  triggerLabel = "Sync local roster",
-}: Readonly<LocalSyncModalProps>) {
+export function LocalSyncModal({ triggerLabel }: Readonly<LocalSyncModalProps>) {
+  const t = useTranslations("LocalSyncModal")
+  const defaultStatusMessage = t("status.default")
+  const resolvedTriggerLabel = triggerLabel ?? t("trigger")
   const [isOpen, setIsOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [lastImportedFile, setLastImportedFile] = useState<string | null>(null)
-  const [statusMessage, setStatusMessage] = useState(DEFAULT_STATUS_MESSAGE)
+  const [statusMessage, setStatusMessage] = useState(defaultStatusMessage)
   const [statusTone, setStatusTone] = useState<StatusTone>("default")
   const { bedEntryCount, clearRoster, entryCount, patientEntryCount, setRoster } =
     useLocalRoster()
@@ -50,14 +61,11 @@ export function LocalSyncModal({
   const handleDrop = useCallback(
     async (acceptedFiles: File[]) => {
       const file = acceptedFiles[0]
-
-      if (!file) {
-        return
-      }
+      if (!file) return
 
       setIsImporting(true)
       setStatusTone("default")
-      setStatusMessage(`Processing ${file.name}...`)
+      setStatusMessage(t("status.processing", { fileName: file.name }))
 
       try {
         const fileText = await file.text()
@@ -67,25 +75,16 @@ export function LocalSyncModal({
           transformHeader: (header) => header.trim(),
         })
 
-        if (parseResult.errors.length > 0) {
-          throw new Error(parseResult.errors[0]?.message ?? "CSV parsing failed.")
-        }
+        if (parseResult.errors.length > 0) throw new Error("CSV_PARSE_FAILED")
 
         const roster = buildRosterFromCsv(parseResult.data, parseResult.meta.fields ?? [])
-
         setRoster(roster)
         setLastImportedFile(file.name)
         setStatusTone("success")
-        setStatusMessage(
-          `Imported ${Object.keys(roster).length} bed-to-name mappings to this device.`
-        )
-        toast.success("Local roster synced to this device.")
+        setStatusMessage(t("status.imported", { count: Object.keys(roster).length }))
+        toast.success(t("toasts.synced"))
       } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to sync the local roster from this CSV."
-
+        const message = getLocalSyncErrorMessage(error, t)
         setStatusTone("error")
         setStatusMessage(message)
         toast.error(message)
@@ -93,16 +92,16 @@ export function LocalSyncModal({
         setIsImporting(false)
       }
     },
-    [setRoster]
+    [setRoster, t]
   )
 
   const handleClear = useCallback(() => {
     clearRoster()
     setLastImportedFile(null)
     setStatusTone("success")
-    setStatusMessage("Local roster removed from this device.")
-    toast.success("Local roster cleared from this device.")
-  }, [clearRoster])
+    setStatusMessage(t("status.cleared"))
+    toast.success(t("toasts.cleared"))
+  }, [clearRoster, t])
 
   const { getInputProps, getRootProps, isDragActive } = useDropzone({
     accept: {
@@ -120,30 +119,31 @@ export function LocalSyncModal({
       open={isOpen}
       onOpenChange={(nextOpen) => {
         setIsOpen(nextOpen)
-
         if (nextOpen) {
           setStatusTone("default")
-          setStatusMessage(DEFAULT_STATUS_MESSAGE)
+          setStatusMessage(defaultStatusMessage)
         }
       }}
     >
       <DialogTrigger asChild>
         <Button>
           <ShieldCheck className="size-4" />
-          {triggerLabel}
+          {resolvedTriggerLabel}
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-2xl"
+      >
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <Badge variant="outline">Zero-Liability PII</Badge>
-            <Badge variant="secondary">Local device only</Badge>
+            <Badge variant="outline">{t("badges.privacy")}</Badge>
+            <Badge variant="secondary">{t("badges.localOnly")}</Badge>
           </div>
-          <DialogTitle>Secure local roster sync</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription className="max-w-2xl wrap-break-word leading-6 text-wrap">
-            Drop a hospital CSV to map `bedId` values to full patient names on
-            this workstation. Data stays on this device and never enters Convex.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -151,11 +151,10 @@ export function LocalSyncModal({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShieldCheck className="size-4 text-primary" />
-              Clinical privacy boundary
+              {t("privacyTitle")}
             </CardTitle>
             <CardDescription className="wrap-break-word leading-6 text-wrap">
-              The uploaded roster is stored only in browser LocalStorage. The
-              backend remains limited to patient initials and operational data.
+              {t("privacyDescription")}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -163,7 +162,7 @@ export function LocalSyncModal({
         <div
           {...getRootProps()}
           className={cn(
-            "rounded-xl border border-dashed p-8 text-center transition-colors",
+            "rounded-xl border border-dashed px-6 py-7 text-center transition-colors sm:p-8",
             isDragActive
               ? "border-primary bg-primary/5"
               : "border-border bg-muted/20 hover:bg-muted/40",
@@ -174,37 +173,36 @@ export function LocalSyncModal({
           <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <UploadCloud className="size-5" />
           </div>
-          <p className="font-medium">
-            {isDragActive ? "Drop the CSV to import it" : "Drag and drop a CSV file"}
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Expecting headers like &quot;Bed Number&quot; and &quot;Patient Name&quot;.
-          </p>
+          <p className="font-medium">{isDragActive ? t("dropzone.active") : t("dropzone.idle")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("dropzone.expectation")}</p>
           <div className="mt-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground">
             <FileSpreadsheet className="size-3.5" />
-            CSV only, one file per import
+            {t("dropzone.fileHint")}
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Card size="sm">
             <CardHeader>
-              <CardTitle>Local roster status</CardTitle>
+              <CardTitle>{t("summary.statusTitle")}</CardTitle>
               <CardDescription className="wrap-break-word text-wrap">
                 {entryCount > 0
-                  ? `${bedEntryCount} imported bed mappings and ${patientEntryCount} manual patient mappings are stored on this device.`
-                  : "No local patient roster has been synced yet."}
+                  ? t("summary.statusWithCounts", {
+                      bedCount: bedEntryCount,
+                      patientCount: patientEntryCount,
+                    })
+                  : t("summary.statusEmpty")}
               </CardDescription>
             </CardHeader>
           </Card>
 
           <Card size="sm">
             <CardHeader>
-              <CardTitle>Latest import</CardTitle>
+              <CardTitle>{t("summary.latestImportTitle")}</CardTitle>
               <CardDescription className="wrap-break-word text-wrap">
                 {lastImportedFile
-                  ? `${lastImportedFile} is the latest uploaded roster file.`
-                  : "No CSV has been imported during this session."}
+                  ? t("summary.latestImportWithFile", { fileName: lastImportedFile })
+                  : t("summary.latestImportEmpty")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -228,14 +226,18 @@ export function LocalSyncModal({
           <span>{statusMessage}</span>
         </div>
 
-        <DialogFooter showCloseButton>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+            {t("actions.close")}
+          </Button>
           <Button
+            type="button"
             variant="outline"
             onClick={handleClear}
             disabled={entryCount === 0 || isImporting}
           >
             <Trash2 className="size-4" />
-            Clear local roster
+            {t("actions.clear")}
           </Button>
         </DialogFooter>
       </DialogContent>

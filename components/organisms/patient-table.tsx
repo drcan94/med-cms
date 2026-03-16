@@ -2,11 +2,13 @@
 
 import type { KeyboardEvent } from "react"
 import { useQuery } from "convex/react"
+import { useTranslations } from "next-intl"
 
 import { api } from "@/convex/_generated/api"
 import type { Doc } from "@/convex/_generated/dataModel"
 import { calculateClinicalDays } from "@/hooks/useClinicalDates"
 import { useLocalRoster } from "@/hooks/useLocalRoster"
+import { STAGING_BED_ID } from "@/lib/patient-privacy"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -26,27 +28,35 @@ type PatientTableProps = {
   organizationId?: string | null
 }
 
-function formatClinicalDaySummary(patient: PatientRecord): string {
+function formatClinicalDaySummary(
+  patient: PatientRecord,
+  t: (key: string, values?: Record<string, number | string>) => string
+): string {
   const clinicalDays = calculateClinicalDays(
     patient.admissionDate,
     patient.surgeryDate
   )
 
-  return `y:${clinicalDays.admittedDays} / po:${
-    clinicalDays.postOpDays ?? "-"
-  }`
+  return t("daySummary", {
+    admittedDays: clinicalDays.admittedDays,
+    postOpDays: clinicalDays.postOpDays ?? "-",
+  })
 }
 
-function PatientTableLoading() {
+function PatientTableLoading({
+  t,
+}: Readonly<{
+  t: (key: string) => string
+}>) {
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Bed</TableHead>
-          <TableHead>Patient Name</TableHead>
-          <TableHead>Diagnosis</TableHead>
-          <TableHead>Days</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>{t("headers.bed")}</TableHead>
+          <TableHead>{t("headers.patientName")}</TableHead>
+          <TableHead>{t("headers.diagnosis")}</TableHead>
+          <TableHead>{t("headers.days")}</TableHead>
+          <TableHead>{t("headers.status")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -79,6 +89,7 @@ export function PatientTable({
   onSelectPatient,
   organizationId,
 }: Readonly<PatientTableProps>) {
+  const t = useTranslations("PatientTable")
   const { getFullPatientName } = useLocalRoster()
   const patients = useQuery(
     api.patients.getPatientsByOrganization,
@@ -88,19 +99,19 @@ export function PatientTable({
   if (!organizationId) {
     return (
       <div className="rounded-xl border border-dashed px-6 py-10 text-sm text-muted-foreground">
-        Select a clinic organization to load tenant-isolated patient data.
+        {t("selectOrganization")}
       </div>
     )
   }
 
   if (patients === undefined) {
-    return <PatientTableLoading />
+    return <PatientTableLoading t={t} />
   }
 
   if (patients.length === 0) {
     return (
       <div className="rounded-xl border border-dashed px-6 py-10 text-sm text-muted-foreground">
-        No patient records have been added for this organization yet.
+        {t("empty")}
       </div>
     )
   }
@@ -117,20 +128,21 @@ export function PatientTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Bed</TableHead>
-          <TableHead>Patient Name</TableHead>
-          <TableHead>Diagnosis</TableHead>
-          <TableHead>Days</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>{t("headers.bed")}</TableHead>
+          <TableHead>{t("headers.patientName")}</TableHead>
+          <TableHead>{t("headers.diagnosis")}</TableHead>
+          <TableHead>{t("headers.days")}</TableHead>
+          <TableHead>{t("headers.status")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {patients.map((patient) => {
-          const fullPatientName = getFullPatientName(
-            patient.initials,
-            patient.bedId,
-            patient._id
-          )
+          const fullPatientName = getFullPatientName({
+            bedId: patient.bedId,
+            identifierCode: patient.identifierCode,
+            initials: patient.initials,
+            patientId: patient._id,
+          })
           const showsLocalRosterName = fullPatientName !== patient.initials
 
           return (
@@ -142,17 +154,19 @@ export function PatientTable({
               onKeyDown={interactive ? handleRowKeyDown(patient) : undefined}
               className={interactive ? "cursor-pointer" : undefined}
             >
-              <TableCell className="font-medium">{patient.bedId}</TableCell>
+              <TableCell className="font-medium">
+                {patient.bedId === STAGING_BED_ID ? t("staging") : patient.bedId}
+              </TableCell>
               <TableCell className="whitespace-normal">
                 <div className="flex flex-col gap-1">
                   <span className="font-medium">{fullPatientName}</span>
                   {showsLocalRosterName ? (
                     <span className="text-xs text-muted-foreground">
-                      DB initials: {patient.initials}
+                      {t("dbInitials", { initials: patient.initials })}
                     </span>
                   ) : (
                     <span className="text-xs text-muted-foreground">
-                      Local roster not synced for this bed
+                      {t("localRosterNotSynced")}
                     </span>
                   )}
                 </div>
@@ -160,9 +174,9 @@ export function PatientTable({
               <TableCell className="max-w-sm whitespace-normal text-muted-foreground">
                 {patient.diagnosis}
               </TableCell>
-              <TableCell>{formatClinicalDaySummary(patient)}</TableCell>
+              <TableCell>{formatClinicalDaySummary(patient, t)}</TableCell>
               <TableCell>
-                <Badge variant="outline">Workflow rules pending</Badge>
+                <Badge variant="outline">{t("workflowRulesPending")}</Badge>
               </TableCell>
             </TableRow>
           )

@@ -4,13 +4,15 @@ import type { WardRoom } from "@/lib/clinic-settings"
 import { buildWardBedMetadata } from "@/lib/ward-layout"
 
 type PatientRecord = Doc<"patients">
+type PatientNameLookup = {
+  bedId: string
+  identifierCode: string
+  initials: string
+  patientId?: PatientRecord["_id"]
+}
 
 type BuildVisitSheetEntriesArgs = {
-  getFullPatientName: (
-    initials: string,
-    bedId: string,
-    patientId?: PatientRecord["_id"]
-  ) => string
+  getFullPatientName: (lookup: PatientNameLookup) => string
   patients: PatientRecord[]
   wardLayout: WardRoom[]
 }
@@ -18,11 +20,13 @@ type BuildVisitSheetEntriesArgs = {
 export type VisitSheetEntry = {
   bedDisplay: string
   bedId: string
+  bedNumber?: number
   daySummary: string
   diagnosis: string
   fullName: string
   id: PatientRecord["_id"]
   initials: string
+  roomName?: string
 }
 
 function compareBedIds(leftBedId: string, rightBedId: string): number {
@@ -71,18 +75,26 @@ export function buildVisitSheetEntries({
         patient.admissionDate,
         patient.surgeryDate
       )
+      const bed = bedMetadata.get(patient.bedId)
 
       return {
-        bedDisplay: bedMetadata.get(patient.bedId)?.bedDisplay ?? patient.bedId,
+        bedDisplay: bed?.bedDisplay ?? patient.bedId,
         bedId: patient.bedId,
+        bedNumber: bed?.bedNumber,
         daySummary: formatVisitDaySummary(
           clinicalDays.admittedDays,
           clinicalDays.postOpDays
         ),
         diagnosis: patient.diagnosis,
-        fullName: getFullPatientName(patient.initials, patient.bedId, patient._id),
+        fullName: getFullPatientName({
+          bedId: patient.bedId,
+          identifierCode: patient.identifierCode,
+          initials: patient.initials,
+          patientId: patient._id,
+        }),
         id: patient._id,
         initials: patient.initials,
+        roomName: bed?.roomName,
       }
     })
 }

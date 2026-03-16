@@ -1,3 +1,8 @@
+"use client"
+
+import { useTranslations } from "next-intl"
+
+import { STAGING_BED_ID } from "@/lib/patient-privacy"
 import type { VisitSheetEntry } from "@/lib/visit-sheet"
 
 type PrintableVisitSheetProps = {
@@ -7,58 +12,71 @@ type PrintableVisitSheetProps = {
 export function PrintableVisitSheet({
   patients,
 }: Readonly<PrintableVisitSheetProps>) {
+  const t = useTranslations("PrintableVisitSheet")
+
   return (
     <>
       <div className="hidden items-end justify-between pb-4 text-black print:flex">
         <div>
-          <h1 className="text-xl font-semibold">Visit Sheet</h1>
-          <p className="text-sm">Dense A4 rounding list for bedside review.</p>
+          <h1 className="text-xl font-semibold">{t("title")}</h1>
+          <p className="text-sm">{t("description")}</p>
         </div>
-        <p className="text-sm">Patients: {patients.length}</p>
+        <p className="text-sm">{t("patients", { count: patients.length })}</p>
       </div>
 
       <table className="hidden w-full border-collapse text-[11px] leading-4 text-black print:table">
         <thead>
           <tr>
             <th className="w-[13%] border border-black px-2 py-2 text-left font-semibold uppercase">
-              Bed
+              {t("headers.bed")}
             </th>
             <th className="w-[24%] border border-black px-2 py-2 text-left font-semibold uppercase">
-              Full Name
+              {t("headers.fullName")}
             </th>
             <th className="w-[12%] border border-black px-2 py-2 text-left font-semibold uppercase">
-              Days
+              {t("headers.days")}
             </th>
             <th className="w-[23%] border border-black px-2 py-2 text-left font-semibold uppercase">
-              Diagnosis
+              {t("headers.diagnosis")}
             </th>
             <th className="w-[14%] border border-black px-2 py-2 text-left font-semibold uppercase">
-              Drains/Fluids
+              {t("headers.drainsFluids")}
             </th>
             <th className="w-[14%] border border-black px-2 py-2 text-left font-semibold uppercase">
-              Notes
+              {t("headers.notes")}
             </th>
           </tr>
         </thead>
 
         <tbody>
           {patients.length > 0 ? (
-            patients.map((patient) => (
-              <tr key={patient.id} className="align-top [page-break-inside:avoid]">
+            patients.map((patient) => {
+              const localizedBedLabel =
+                patient.bedId === STAGING_BED_ID
+                  ? t("staging")
+                  : typeof patient.bedNumber === "number"
+                    ? patient.roomName?.trim()
+                      ? `${patient.roomName} - ${t("bedLabel", { number: patient.bedNumber })}`
+                      : t("bedLabel", { number: patient.bedNumber })
+                    : patient.bedDisplay
+
+              return (
+                <tr key={patient.id} className="align-top [page-break-inside:avoid]">
                 <td className="border border-black px-2 py-2 font-semibold">
-                  {patient.bedDisplay}
+                    {localizedBedLabel}
                 </td>
                 <td className="border border-black px-2 py-2">{patient.fullName}</td>
                 <td className="border border-black px-2 py-2">{patient.daySummary}</td>
                 <td className="border border-black px-2 py-2">{patient.diagnosis}</td>
                 <td className="h-14 border border-black px-2 py-2" />
                 <td className="h-14 border border-black px-2 py-2" />
-              </tr>
-            ))
+                </tr>
+              )
+            })
           ) : (
             <tr>
               <td className="border border-black px-2 py-6 text-center" colSpan={6}>
-                No patients available for the active organization.
+                {t("empty")}
               </td>
             </tr>
           )}

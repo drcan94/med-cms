@@ -10,6 +10,7 @@ export type PatientFormState = {
   bedId: string
   diagnosis: string
   fullName: string
+  identifierCode: string
   initials: string
   serviceName: string
   surgeryDate: string
@@ -35,9 +36,10 @@ export function getInitialPatientFormState(
 ): PatientFormState {
   return {
     admissionDate: formatDateForInput(patient?.admissionDate),
-    bedId: patient?.bedId === STAGING_BED_ID ? "" : (patient?.bedId ?? ""),
+    bedId: patient?.bedId ?? STAGING_BED_ID,
     diagnosis: patient?.diagnosis ?? "",
     fullName,
+    identifierCode: patient?.identifierCode ?? "",
     initials: patient?.initials ?? "",
     serviceName: patient?.serviceName ?? "",
     surgeryDate: formatDateForInput(patient?.surgeryDate),

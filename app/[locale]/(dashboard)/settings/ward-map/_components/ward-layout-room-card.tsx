@@ -1,6 +1,7 @@
 "use client"
 
 import { Trash2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import type { FieldErrors, UseFormRegister } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
@@ -28,17 +29,19 @@ export function WardLayoutRoomCard({
   onRemove,
   register,
 }: Readonly<WardLayoutRoomCardProps>) {
+  const t = useTranslations("WardLayoutRoomCard")
+
   return (
     <Card size="sm">
       <CardHeader className="border-b">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base">Room {index + 1}</CardTitle>
-            <CardDescription>Saved as room layout metadata.</CardDescription>
+            <CardTitle className="text-base">{t("title", { number: index + 1 })}</CardTitle>
+            <CardDescription>{t("description")}</CardDescription>
           </div>
           <Button type="button" variant="ghost" size="icon" onClick={onRemove}>
             <Trash2 className="size-4" />
-            <span className="sr-only">Remove room {index + 1}</span>
+            <span className="sr-only">{t("remove", { number: index + 1 })}</span>
           </Button>
         </div>
       </CardHeader>
@@ -46,12 +49,12 @@ export function WardLayoutRoomCard({
         <input type="hidden" {...register(`rooms.${index}.roomId`)} />
 
         <div className="space-y-2">
-          <Label htmlFor={`room-name-${index}`}>Room name</Label>
+          <Label htmlFor={`room-name-${index}`}>{t("fields.roomName.label")}</Label>
           <Input
             id={`room-name-${index}`}
-            placeholder="Room 101"
+            placeholder={t("fields.roomName.placeholder")}
             {...register(`rooms.${index}.name`, {
-              required: "Room name is required.",
+              required: t("fields.roomName.error"),
             })}
           />
           {errors.rooms?.[index]?.name ? (
@@ -62,15 +65,15 @@ export function WardLayoutRoomCard({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor={`room-capacity-${index}`}>Capacity</Label>
+          <Label htmlFor={`room-capacity-${index}`}>{t("fields.capacity.label")}</Label>
           <Input
             id={`room-capacity-${index}`}
             min={1}
             type="number"
             {...register(`rooms.${index}.capacity`, {
-              required: "Capacity is required.",
+              required: t("fields.capacity.required"),
               min: {
-                message: "Capacity must be at least 1.",
+                message: t("fields.capacity.min"),
                 value: 1,
               },
               valueAsNumber: true,

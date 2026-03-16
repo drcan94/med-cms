@@ -67,8 +67,8 @@ export function Sidebar({ className, onNavigate }: Readonly<SidebarProps>) {
           </div>
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold tracking-tight">Med CMS</span>
-              <Badge variant="outline">B2B</Badge>
+              <span className="font-semibold tracking-tight">{t("brandName")}</span>
+              <Badge variant="outline">{t("brandBadge")}</Badge>
             </div>
             <p className="text-xs text-muted-foreground wrap-break-word text-wrap">
               {t("workspaceSubtitle")}

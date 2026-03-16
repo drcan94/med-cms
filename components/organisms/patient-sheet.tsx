@@ -1,15 +1,25 @@
 "use client"
 
-import { useLocale } from "next-intl"
+import { useQuery } from "convex/react"
+import { useLocale, useTranslations } from "next-intl"
 
+import { api } from "@/convex/_generated/api"
 import type { Doc } from "@/convex/_generated/dataModel"
 import { usePatientSheetForm } from "@/hooks/usePatientSheetForm"
 import type { AppLocale } from "@/i18n/routing"
-import { generatePatientInitials } from "@/lib/patient-privacy"
+import { buildPatientBedOptions } from "@/lib/patient-bed-options"
+import { STAGING_BED_ID, generatePatientInitials } from "@/lib/patient-privacy"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -21,7 +31,6 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 
 type PatientRecord = Doc<"patients">
-
 type PatientSheetProps = {
   onOpenChange: (open: boolean) => void
   open: boolean
@@ -30,61 +39,80 @@ type PatientSheetProps = {
   userId?: string | null
 }
 
-type PatientSheetFormProps = PatientSheetProps
-
 function PatientSheetForm({
   onOpenChange,
+  open,
   organizationId,
   patient,
   userId,
-}: Readonly<PatientSheetFormProps>) {
+}: Readonly<PatientSheetProps>) {
   const locale = useLocale() as AppLocale
-  const { formState, handleFieldChange, handleSubmit, isEditing, isSaving } =
-    usePatientSheetForm({
-      onOpenChange,
-      organizationId,
-      patient,
-      userId,
-    })
+  const t = useTranslations("PatientSheet")
+  const clinicSettings = useQuery(
+    api.clinicSettings.getClinicSettings,
+    open && organizationId ? { organizationId } : "skip"
+  )
+  const patients = useQuery(
+    api.patients.getPatientsByOrganization,
+    open && organizationId ? { organizationId } : "skip"
+  ) as PatientRecord[] | undefined
+  const {
+    formState,
+    handleFieldChange,
+    handleValueChange,
+    handleSubmit,
+    isEditing,
+    isSaving,
+  } = usePatientSheetForm({
+    onOpenChange,
+    organizationId,
+    patient,
+    userId,
+  })
   const initialsPreview =
     formState.fullName.trim().length > 0
       ? generatePatientInitials(formState.fullName, locale)
       : patient?.initials ?? ""
+  const bedOptions = buildPatientBedOptions({
+    currentPatient: patient,
+    currentBedLabel: (bedId) => t("fields.bedId.options.currentBed", { bedId }),
+    formatBedLabel: (roomName, bedNumber) => {
+      const bedLabel = t("fields.bedId.options.bedLabel", { number: bedNumber })
+      return roomName.trim() ? `${roomName} - ${bedLabel}` : bedLabel
+    },
+    patients,
+    stagingLabel: t("fields.bedId.options.staging"),
+    wardLayout: clinicSettings?.wardLayout,
+  })
 
   return (
     <form onSubmit={handleSubmit} className="flex h-full flex-col">
       <SheetHeader className="border-b">
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{isEditing ? "Edit patient" : "New patient"}</Badge>
-          <Badge variant="secondary">Initials only in Convex</Badge>
+          <Badge variant="outline">{t(isEditing ? "badges.editing" : "badges.new")}</Badge>
+          <Badge variant="secondary">{t("badges.privacy")}</Badge>
         </div>
-        <SheetTitle>
-          {isEditing ? "Update patient workflow" : "Create patient workflow"}
-        </SheetTitle>
-        <SheetDescription className="leading-6">
-          Full patient names never enter Convex. This form derives masked
-          initials locally and keeps the bedside name only in browser storage.
-        </SheetDescription>
+        <SheetTitle>{t(isEditing ? "titles.editing" : "titles.new")}</SheetTitle>
+        <SheetDescription className="leading-6">{t("description")}</SheetDescription>
       </SheetHeader>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor="fullName">{t("fields.fullName.label")}</Label>
             <Input
               id="fullName"
               value={formState.fullName}
               onChange={handleFieldChange("fullName")}
-              placeholder="Ali Aksoy"
+              placeholder={t("fields.fullName.placeholder")}
             />
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="initials">Initials preview</Label>
+            <Label htmlFor="initials">{t("fields.initials.label")}</Label>
             <Input
               id="initials"
               value={initialsPreview}
-              placeholder="A*** Y***"
+              placeholder={t("fields.initials.placeholder")}
               readOnly
             />
           </div>
@@ -92,39 +120,69 @@ function PatientSheetForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="bedId">Bed (optional)</Label>
+            <Label htmlFor="identifierCode">{t("fields.identifierCode.label")}</Label>
             <Input
-              id="bedId"
-              value={formState.bedId}
-              onChange={handleFieldChange("bedId")}
-              placeholder="Room 101 - Bed 1"
+              id="identifierCode"
+              value={formState.identifierCode}
+              onChange={handleFieldChange("identifierCode")}
+              placeholder={t("fields.identifierCode.placeholder")}
+              autoCapitalize="characters"
+              autoComplete="off"
+              maxLength={4}
+              required
             />
+            <p className="text-xs leading-5 text-muted-foreground">
+              {t("fields.identifierCode.description")}
+            </p>
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="serviceName">Service / Ward</Label>
+            <Label htmlFor="bedId">{t("fields.bedId.label")}</Label>
+            <Select
+              value={formState.bedId || STAGING_BED_ID}
+              onValueChange={handleValueChange("bedId")}
+            >
+              <SelectTrigger id="bedId">
+                <SelectValue placeholder={t("fields.bedId.placeholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {bedOptions.map((bed) => (
+                  <SelectItem key={bed.value} value={bed.value}>
+                    {bed.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs leading-5 text-muted-foreground">
+              {t("fields.bedId.description")}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="serviceName">{t("fields.serviceName.label")}</Label>
             <Input
               id="serviceName"
               value={formState.serviceName}
               onChange={handleFieldChange("serviceName")}
-              placeholder="Gogus Cerrahi"
+              placeholder={t("fields.serviceName.placeholder")}
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="diagnosis">Diagnosis</Label>
+          <Label htmlFor="diagnosis">{t("fields.diagnosis.label")}</Label>
           <Textarea
             id="diagnosis"
             value={formState.diagnosis}
             onChange={handleFieldChange("diagnosis")}
-            placeholder="Post-op observation, fracture stabilization, etc."
+            placeholder={t("fields.diagnosis.placeholder")}
           />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="admissionDate">Admission date</Label>
+            <Label htmlFor="admissionDate">{t("fields.admissionDate.label")}</Label>
             <Input
               id="admissionDate"
               type="date"
@@ -132,9 +190,8 @@ function PatientSheetForm({
               onChange={handleFieldChange("admissionDate")}
             />
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="surgeryDate">Surgery date</Label>
+            <Label htmlFor="surgeryDate">{t("fields.surgeryDate.label")}</Label>
             <Input
               id="surgeryDate"
               type="date"
@@ -145,38 +202,27 @@ function PatientSheetForm({
         </div>
 
         <div className="rounded-xl border border-dashed px-4 py-3 text-xs leading-6 text-muted-foreground">
-          Full names stay in browser storage only. If no bed is selected, this
-          patient is staged for later placement on the ward board.
+          {t("privacyNote")}
         </div>
       </div>
 
       <SheetFooter className="border-t">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-        >
-          Cancel
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          {t("actions.cancel")}
         </Button>
         <Button type="submit" disabled={isSaving}>
           {isSaving
-            ? "Saving..."
-            : isEditing
-              ? "Save changes"
-              : "Create patient"}
+            ? t("actions.saving")
+            : t(isEditing ? "actions.saveChanges" : "actions.createPatient")}
         </Button>
       </SheetFooter>
     </form>
   )
 }
 
-export function PatientSheet({
-  onOpenChange,
-  open,
-  organizationId,
-  patient,
-  userId,
-}: Readonly<PatientSheetProps>) {
+export function PatientSheet(props: Readonly<PatientSheetProps>) {
+  const { onOpenChange, open, organizationId, patient, userId } = props
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full p-0 sm:max-w-xl">

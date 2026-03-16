@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import { useMutation, useQuery } from "convex/react"
 import { Plus, Save } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
 import { api } from "@/convex/_generated/api"
@@ -27,6 +28,7 @@ import {
 import { WardLayoutRoomCard } from "./_components/ward-layout-room-card"
 
 export default function WardMapSettingsPage() {
+  const t = useTranslations("WardMapSettingsPage")
   const { isLoaded, orgId } = useAuth()
   const settings = useQuery(
     api.clinicSettings.getClinicSettings,
@@ -70,12 +72,12 @@ export default function WardMapSettingsPage() {
 
   const onSubmit = async (values: WardLayoutFormValues): Promise<void> => {
     if (!orgId) {
-      toast.error("Select an organization before saving the ward layout.")
+      toast.error(t("toasts.selectOrganization"))
       return
     }
 
     if (!settings) {
-      toast.error("Settings are still loading.")
+      toast.error(t("toasts.loading"))
       return
     }
 
@@ -89,11 +91,9 @@ export default function WardMapSettingsPage() {
       })
 
       reset(toWardLayoutFormValues(wardLayout))
-      toast.success("Ward layout saved.")
+      toast.success(t("toasts.saved"))
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Unable to save the ward layout."
-      )
+      toast.error(error instanceof Error ? error.message : t("toasts.saveError"))
     }
   }
 
@@ -101,8 +101,8 @@ export default function WardMapSettingsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Ward map</CardTitle>
-          <CardDescription>Loading organization context...</CardDescription>
+          <CardTitle>{t("state.title")}</CardTitle>
+          <CardDescription>{t("state.loading")}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -112,10 +112,8 @@ export default function WardMapSettingsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Ward map</CardTitle>
-          <CardDescription>
-            Select a clinic organization to edit room and bed capacity settings.
-          </CardDescription>
+          <CardTitle>{t("state.title")}</CardTitle>
+          <CardDescription>{t("state.selectOrganization")}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -128,14 +126,13 @@ export default function WardMapSettingsPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">Ward Map</Badge>
-                <Badge variant="secondary">Layout editor</Badge>
+                <Badge variant="outline">{t("badges.title")}</Badge>
+                <Badge variant="secondary">{t("badges.subtitle")}</Badge>
               </div>
               <div className="space-y-1">
-                <CardTitle>Ward layout builder</CardTitle>
+                <CardTitle>{t("title")}</CardTitle>
                 <CardDescription className="max-w-2xl leading-6">
-                  Define rooms and bed counts here, then use the main ward map to
-                  drag patients between the generated bed slots.
+                  {t("description")}
                 </CardDescription>
               </div>
             </div>
@@ -147,11 +144,11 @@ export default function WardMapSettingsPage() {
                 onClick={() => append(createEmptyWardLayoutRoom())}
               >
                 <Plus className="size-4" />
-                Add room
+                {t("actions.addRoom")}
               </Button>
               <Button type="submit" disabled={isSubmitting || settings === undefined}>
                 <Save className="size-4" />
-                {isSubmitting ? "Saving..." : "Save layout"}
+                {isSubmitting ? t("actions.saving") : t("actions.save")}
               </Button>
             </div>
           </div>
@@ -160,13 +157,13 @@ export default function WardMapSettingsPage() {
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
           <div className="rounded-xl border px-4 py-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Rooms
+              {t("metrics.rooms")}
             </p>
             <p className="mt-2 text-2xl font-semibold">{fields.length}</p>
           </div>
           <div className="rounded-xl border px-4 py-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Bed capacity
+              {t("metrics.bedCapacity")}
             </p>
             <p className="mt-2 text-2xl font-semibold">{totalBeds}</p>
           </div>
@@ -177,15 +174,12 @@ export default function WardMapSettingsPage() {
         <Card size="sm" className="border-dashed">
           <CardContent className="flex flex-col items-start gap-4 pt-6">
             <div className="space-y-2">
-              <h2 className="text-base font-medium">No rooms configured yet</h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Add each room you want represented in the interactive ward map,
-                then save to generate bed slots for patient placement.
-              </p>
+              <h2 className="text-base font-medium">{t("empty.title")}</h2>
+              <p className="text-sm leading-6 text-muted-foreground">{t("empty.description")}</p>
             </div>
             <Button type="button" onClick={() => append(createEmptyWardLayoutRoom())}>
               <Plus className="size-4" />
-              Add first room
+              {t("actions.addFirstRoom")}
             </Button>
           </CardContent>
         </Card>

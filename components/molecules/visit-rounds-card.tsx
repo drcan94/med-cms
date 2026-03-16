@@ -1,6 +1,9 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { Badge } from "@/components/ui/badge"
+import { STAGING_BED_ID } from "@/lib/patient-privacy"
 import type { VisitSheetEntry } from "@/lib/visit-sheet"
 
 type VisitRoundsCardProps = {
@@ -10,7 +13,16 @@ type VisitRoundsCardProps = {
 export function VisitRoundsCard({
   entry,
 }: Readonly<VisitRoundsCardProps>) {
+  const t = useTranslations("VisitRoundsCard")
   const showsLocalRosterName = entry.fullName !== entry.initials
+  const localizedBedLabel =
+    entry.bedId === STAGING_BED_ID
+      ? t("staging")
+      : typeof entry.bedNumber === "number"
+        ? entry.roomName?.trim()
+          ? `${entry.roomName} - ${t("bedLabel", { number: entry.bedNumber })}`
+          : t("bedLabel", { number: entry.bedNumber })
+        : entry.bedDisplay
 
   return (
     <article className="rounded-2xl border bg-background p-5 shadow-xs">
@@ -18,22 +30,22 @@ export function VisitRoundsCard({
         <div className="space-y-3">
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Patient
+              {t("patient")}
             </p>
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               {entry.initials}
             </h2>
             <p className="text-base font-medium text-foreground sm:text-lg">
-              {showsLocalRosterName ? entry.fullName : "Local roster name not synced"}
+              {showsLocalRosterName ? entry.fullName : t("localRosterNotSynced")}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="px-3 py-1 text-sm">
-              Bed: {entry.bedDisplay}
+              {t("bed")}: {localizedBedLabel}
             </Badge>
             <Badge variant="secondary" className="px-3 py-1 text-sm">
-              Days: {entry.daySummary}
+              {t("days")}: {entry.daySummary}
             </Badge>
           </div>
         </div>
@@ -41,7 +53,7 @@ export function VisitRoundsCard({
 
       <div className="mt-5 space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Diagnosis
+          {t("diagnosis")}
         </p>
         <p className="text-lg leading-7 text-foreground">{entry.diagnosis}</p>
       </div>

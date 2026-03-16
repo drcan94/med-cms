@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import { useMutation, useQuery } from "convex/react"
 import { Plus, Save } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
 import { api } from "@/convex/_generated/api"
@@ -27,6 +28,7 @@ import {
 } from "@/lib/clinic-settings"
 
 export default function ConventionsPage() {
+  const t = useTranslations("ConventionsPage")
   const { isLoaded, orgId } = useAuth()
   const settings = useQuery(
     api.clinicSettings.getClinicSettings,
@@ -81,12 +83,12 @@ export default function ConventionsPage() {
 
   const onSubmit = async (values: ConventionsFormValues): Promise<void> => {
     if (!orgId) {
-      toast.error("Select an organization before saving clinic settings.")
+      toast.error(t("toasts.selectOrganization"))
       return
     }
 
     if (!settings) {
-      toast.error("Settings are still loading.")
+      toast.error(t("toasts.loading"))
       return
     }
 
@@ -100,10 +102,10 @@ export default function ConventionsPage() {
       })
 
       reset({ rules })
-      toast.success("Clinical conventions saved.")
+      toast.success(t("toasts.saved"))
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to save clinic settings."
+        error instanceof Error ? error.message : t("toasts.saveError")
       )
     }
   }
@@ -112,8 +114,8 @@ export default function ConventionsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Conventions</CardTitle>
-          <CardDescription>Loading organization context...</CardDescription>
+          <CardTitle>{t("state.title")}</CardTitle>
+          <CardDescription>{t("state.loading")}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -123,10 +125,8 @@ export default function ConventionsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Conventions</CardTitle>
-          <CardDescription>
-            Select a clinic organization to manage tenant-specific rules.
-          </CardDescription>
+          <CardTitle>{t("state.title")}</CardTitle>
+          <CardDescription>{t("state.selectOrganization")}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -139,14 +139,13 @@ export default function ConventionsPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">Conventions</Badge>
-                <Badge variant="secondary">If / Then workflow logic</Badge>
+                <Badge variant="outline">{t("badges.title")}</Badge>
+                <Badge variant="secondary">{t("badges.subtitle")}</Badge>
               </div>
               <div className="space-y-1">
-                <CardTitle>Clinical convention builder</CardTitle>
+                <CardTitle>{t("title")}</CardTitle>
                 <CardDescription className="max-w-2xl leading-6">
-                  Define when diagnoses or surgery terms should require a
-                  checklist item before the workflow can move forward.
+                  {t("description")}
                 </CardDescription>
               </div>
             </div>
@@ -154,11 +153,11 @@ export default function ConventionsPage() {
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={handleAddRule}>
                 <Plus className="size-4" />
-                Add rule
+                {t("actions.addRule")}
               </Button>
               <Button type="submit" disabled={isSubmitting || settings === undefined}>
                 <Save className="size-4" />
-                {isSubmitting ? "Saving..." : "Save conventions"}
+                {isSubmitting ? t("actions.saving") : t("actions.save")}
               </Button>
             </div>
           </div>
@@ -166,19 +165,23 @@ export default function ConventionsPage() {
 
         <CardContent className="grid gap-4 pt-6">
           <div className="rounded-xl border border-dashed px-4 py-3 text-sm leading-6 text-muted-foreground">
-            Example: IF <span className="font-medium text-foreground">Diagnosis</span>{" "}
-            contains <span className="font-medium text-foreground">CABG</span>,
-            THEN require{" "}
+            {t("example.prefix")}{" "}
             <span className="font-medium text-foreground">
-              Cardiac surgery checklist
+              {t("example.sourceField")}
+            </span>{" "}
+            {t("example.contains")}{" "}
+            <span className="font-medium text-foreground">{t("example.matchValue")}</span>
+            , {t("example.thenRequire")}{" "}
+            <span className="font-medium text-foreground">
+              {t("example.checklistItem")}
             </span>
             .
           </div>
 
           <div className="rounded-xl border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
             {settings === undefined
-              ? "Loading saved rules..."
-              : `${fields.length} rule${fields.length === 1 ? "" : "s"} configured for this clinic.`}
+              ? t("status.loadingRules")
+              : t("status.rulesConfigured", { count: fields.length })}
           </div>
         </CardContent>
       </Card>
@@ -187,15 +190,14 @@ export default function ConventionsPage() {
         <Card size="sm" className="border-dashed">
           <CardContent className="flex flex-col items-start gap-4 pt-6">
             <div className="space-y-2">
-              <h2 className="text-base font-medium">No conventions yet</h2>
+              <h2 className="text-base font-medium">{t("empty.title")}</h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                Start with a rule that maps a diagnosis or surgery keyword to a
-                required checklist item.
+                {t("empty.description")}
               </p>
             </div>
             <Button type="button" onClick={handleAddRule}>
               <Plus className="size-4" />
-              Add first rule
+              {t("actions.addFirstRule")}
             </Button>
           </CardContent>
         </Card>

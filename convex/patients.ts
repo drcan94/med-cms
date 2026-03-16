@@ -6,53 +6,8 @@ import {
 } from "../lib/commercial"
 import { STAGING_BED_ID } from "../lib/patient-privacy"
 import { internal } from "./_generated/api"
-import type { Doc } from "./_generated/dataModel"
 import { mutation, query } from "./_generated/server"
-
-type PatientRecord = Doc<"patients">
-type WritablePatientFields = Pick<
-  PatientRecord,
-  | "organizationId"
-  | "initials"
-  | "bedId"
-  | "diagnosis"
-  | "admissionDate"
-  | "surgeryDate"
-  | "serviceName"
->
-
-function requireText(value: string, fieldName: string): string {
-  const normalizedValue = value.trim()
-
-  if (!normalizedValue) {
-    throw new Error(`${fieldName} is required.`)
-  }
-
-  return normalizedValue
-}
-
-function sanitizePatientFields(args: {
-  organizationId: string
-  initials: string
-  bedId: string
-  diagnosis: string
-  admissionDate: string
-  surgeryDate?: string
-  serviceName?: string
-}): WritablePatientFields {
-  const surgeryDate = args.surgeryDate?.trim()
-  const serviceName = args.serviceName?.trim()
-
-  return {
-    organizationId: requireText(args.organizationId, "Organization"),
-    initials: requireText(args.initials, "Patient initials"),
-    bedId: requireText(args.bedId, "Bed"),
-    diagnosis: requireText(args.diagnosis, "Diagnosis"),
-    admissionDate: requireText(args.admissionDate, "Admission date"),
-    surgeryDate: surgeryDate || undefined,
-    serviceName: serviceName || undefined,
-  }
-}
+import { requireText, sanitizePatientFields } from "./patientValidators"
 
 export const getPatientsByOrganization = query({
   args: {
@@ -98,6 +53,7 @@ export const upsertPatient = mutation({
     organizationId: v.string(),
     userId: v.string(),
     initials: v.string(),
+    identifierCode: v.string(),
     bedId: v.string(),
     diagnosis: v.string(),
     admissionDate: v.string(),

@@ -26,7 +26,10 @@ import { useLocalRoster } from "@/hooks/useLocalRoster"
 import { usePLGLimits } from "@/hooks/usePLGLimits"
 import { useWardMapBoard } from "@/hooks/useWardMapBoard"
 import { formatPatientToastName } from "@/lib/patient-privacy"
-import { getReadableBedLabel } from "@/lib/ward-layout"
+import {
+  getWardMapBedDisplayLabel,
+  resolveWardMapErrorMessage,
+} from "@/lib/ward-map-display"
 
 type PatientRecord = Doc<"patients">
 
@@ -64,7 +67,12 @@ export default function WardMapPage() {
   })
 
   const getPatientName = (patient: PatientRecord) =>
-    getFullPatientName(patient.initials, patient.bedId, patient._id)
+    getFullPatientName({
+      bedId: patient.bedId,
+      identifierCode: patient.identifierCode,
+      initials: patient.initials,
+      patientId: patient._id,
+    })
 
   const handleSelectPatient = (patient: PatientRecord): void => {
     if (isLocked) {
@@ -127,7 +135,7 @@ export default function WardMapPage() {
             getPatientName(patient),
             patient.initials
           ),
-          destination: getReadableBedLabel(bedMetadata, destinationBedId),
+          destination: getWardMapBedDisplayLabel(destinationBedId, bedMetadata, t),
         })
       )
     } catch (error) {
@@ -135,7 +143,7 @@ export default function WardMapPage() {
         ...currentBedIds,
         [patient._id]: previousBedId,
       }))
-      toast.error(error instanceof Error ? error.message : t("toasts.moveError"))
+      toast.error(resolveWardMapErrorMessage(error, t))
     }
   }
 

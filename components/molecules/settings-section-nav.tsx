@@ -2,42 +2,38 @@
 
 import type { LucideIcon } from "lucide-react"
 import { CreditCard, LayoutGrid, ListChecks, Settings2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 import { buttonVariants } from "@/components/ui/button"
 import { Link, usePathname } from "@/i18n/navigation"
 import { cn } from "@/lib/utils"
 
 type SettingsNavItem = {
-  description: string
   href: string
   icon: LucideIcon
-  label: string
+  translationKey: string
 }
 
 const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   {
-    description: "Clinic overview and admin utilities.",
     href: "/settings",
     icon: Settings2,
-    label: "General",
+    translationKey: "general",
   },
   {
-    description: "If/Then workflow requirements for clinicians.",
     href: "/settings/conventions",
     icon: ListChecks,
-    label: "Conventions",
+    translationKey: "conventions",
   },
   {
-    description: "Room counts and bed-capacity summaries.",
     href: "/settings/ward-map",
     icon: LayoutGrid,
-    label: "Ward Map",
+    translationKey: "wardMap",
   },
   {
-    description: "Subscription status, limits, and upgrade actions.",
     href: "/settings/billing",
     icon: CreditCard,
-    label: "Billing",
+    translationKey: "billing",
   },
 ]
 
@@ -51,10 +47,11 @@ function isSettingsNavItemActive(pathname: string, href: string): boolean {
 
 export function SettingsSectionNav() {
   const pathname = usePathname()
+  const t = useTranslations("SettingsNav")
 
   return (
-    <nav className="grid gap-2" aria-label="Settings sections">
-      {SETTINGS_NAV_ITEMS.map(({ description, href, icon: Icon, label }) => {
+    <nav className="grid gap-2" aria-label={t("ariaLabel")}>
+      {SETTINGS_NAV_ITEMS.map(({ href, icon: Icon, translationKey }) => {
         const isActive = isSettingsNavItemActive(pathname, href)
 
         return (
@@ -69,9 +66,11 @@ export function SettingsSectionNav() {
           >
             <Icon className="mt-0.5 size-4 shrink-0 text-primary" />
             <span className="min-w-0 space-y-1">
-              <span className="block text-sm font-medium">{label}</span>
+              <span className="block text-sm font-medium">
+                {t(`${translationKey}.label`)}
+              </span>
               <span className="block text-xs leading-5 text-muted-foreground break-words text-wrap">
-                {description}
+                {t(`${translationKey}.description`)}
               </span>
             </span>
           </Link>

@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useQuery } from "convex/react"
 import { Printer } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 import { api } from "@/convex/_generated/api"
 import type { Doc } from "@/convex/_generated/dataModel"
@@ -60,6 +61,7 @@ function VisitStateCard({
 }
 
 export default function VisitModePage() {
+  const t = useTranslations("VisitPage")
   const { entryCount, getFullPatientName } = useLocalRoster()
   const { isLoaded, orgId } = useAuth()
   const settings = useQuery(
@@ -88,8 +90,8 @@ export default function VisitModePage() {
   if (!isLoaded) {
     return (
       <VisitStateCard
-        title="Visit Mode"
-        description="Loading organization context for mobile rounds..."
+        title={t("state.title")}
+        description={t("state.loadingOrganization")}
       />
     )
   }
@@ -97,8 +99,8 @@ export default function VisitModePage() {
   if (!orgId) {
     return (
       <VisitStateCard
-        title="Visit Mode"
-        description="Select a clinic organization to load the current rounding list."
+        title={t("state.title")}
+        description={t("state.selectOrganization")}
       />
     )
   }
@@ -106,8 +108,8 @@ export default function VisitModePage() {
   if (settings === undefined || patients === undefined) {
     return (
       <VisitStateCard
-        title="Visit Mode"
-        description="Loading patients and clinic settings for visit-sheet generation..."
+        title={t("state.title")}
+        description={t("state.loadingVisitSheet")}
       />
     )
   }
@@ -119,20 +121,17 @@ export default function VisitModePage() {
       <section className="grid gap-4 rounded-2xl border bg-background p-6 shadow-xs print:hidden lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">Phase 6</Badge>
-            <Badge variant="secondary">Visit Mode & Print</Badge>
+            <Badge variant="outline">{t("phaseBadge")}</Badge>
+            <Badge variant="secondary">{t("featureBadge")}</Badge>
             <Badge variant="outline">
-              {usesWardLayoutOrder ? "Ward layout order applied" : "Natural bed order fallback"}
+              {usesWardLayoutOrder ? t("orderApplied") : t("orderFallback")}
             </Badge>
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Mobile clinical rounds
-            </h1>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("title")}</h1>
             <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-              Large on-screen cards keep bedside review readable, while print mode
-              swaps to a dense black-and-white A4 visit sheet.
+              {t("description")}
             </p>
           </div>
         </div>
@@ -144,14 +143,14 @@ export default function VisitModePage() {
           onClick={() => window.print()}
         >
           <Printer className="size-4" />
-          Print Visit Sheet
+          {t("print")}
         </Button>
       </section>
 
       <section className="grid gap-3 print:hidden sm:grid-cols-3">
-        <VisitMetricCard label="Patients" value={visitEntries.length} />
-        <VisitMetricCard label="Configured Beds" value={totalBeds} />
-        <VisitMetricCard label="Local Roster Names" value={entryCount} />
+        <VisitMetricCard label={t("metrics.patients")} value={visitEntries.length} />
+        <VisitMetricCard label={t("metrics.configuredBeds")} value={totalBeds} />
+        <VisitMetricCard label={t("metrics.localRosterNames")} value={entryCount} />
       </section>
 
       {visitEntries.length > 0 ? (
@@ -163,17 +162,11 @@ export default function VisitModePage() {
       ) : (
         <Card className="print:hidden">
           <CardHeader>
-            <CardTitle>No patients on the current rounding list</CardTitle>
-            <CardDescription>
-              Add patient records in the census first, then print the visit sheet
-              when the list is ready for rounds.
-            </CardDescription>
+            <CardTitle>{t("empty.title")}</CardTitle>
+            <CardDescription>{t("empty.description")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              If a ward layout has not been configured yet, the list will fall back
-              to natural bed sorting.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("empty.note")}</p>
           </CardContent>
         </Card>
       )}
@@ -186,7 +179,7 @@ export default function VisitModePage() {
           onClick={() => window.print()}
         >
           <Printer className="size-4" />
-          Print Visit Sheet
+          {t("print")}
         </Button>
       </div>
 

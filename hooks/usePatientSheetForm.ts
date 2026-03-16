@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useMutation } from "convex/react"
-import { useLocale } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 
 import { api } from "@/convex/_generated/api"
@@ -14,6 +14,11 @@ import {
   toClinicalIsoDate,
   type PatientFormState,
 } from "@/lib/patient-form"
+import {
+  isValidIdentifierCode,
+  normalizeIdentifierCode,
+  sanitizeIdentifierCodeInput,
+} from "@/lib/patient-identity"
 import {
   generatePatientInitials,
   normalizePatientFullName,
@@ -29,6 +34,28 @@ type UsePatientSheetFormArgs = {
   userId?: string | null
 }
 
+function resolvePatientSheetErrorMessage(
+  error: unknown,
+  t: (key: string) => string
+): string {
+  if (!(error instanceof Error)) {
+    return t("toasts.saveError")
+  }
+
+  switch (error.message) {
+    case "TRIAL_LIMIT_REACHED":
+      return t("toasts.trialLimitReached")
+    case "That bed is already assigned to another patient.":
+      return t("toasts.bedOccupied")
+    case "Patient record not found.":
+      return t("toasts.notFound")
+    case "You cannot update a patient outside your organization.":
+      return t("toasts.crossOrganization")
+    default:
+      return error.message
+  }
+}
+
 export function usePatientSheetForm({
   onOpenChange,
   organizationId,
@@ -36,11 +63,19 @@ export function usePatientSheetForm({
   userId,
 }: Readonly<UsePatientSheetFormArgs>) {
   const locale = useLocale() as AppLocale
-  const { patientRoster, setPatientName } = useLocalRoster()
+  const t = useTranslations("PatientSheet")
+  const { getLocalPatientName, setPatientName } = useLocalRoster()
   const [formState, setFormState] = useState<PatientFormState>(() =>
     getInitialPatientFormState(
       patient,
-      patient ? patientRoster[patient._id] ?? "" : ""
+      patient
+        ? getLocalPatientName({
+            bedId: patient.bedId,
+            identifierCode: patient.identifierCode,
+            initials: patient.initials,
+            patientId: patient._id,
+          })
+        : ""
     )
   )
   const [isSaving, setIsSaving] = useState(false)
@@ -53,7 +88,18 @@ export function usePatientSheetForm({
       event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ): void => {
       const { value } = event.target
+      const nextValue =
+        field === "identifierCode" ? sanitizeIdentifierCodeInput(value) : value
 
+      setFormState((currentState) => ({
+        ...currentState,
+        [field]: nextValue,
+      }))
+    }
+
+  const handleValueChange =
+    (field: keyof PatientFormState) =>
+    (value: string): void => {
       setFormState((currentState) => ({
         ...currentState,
         [field]: value,
@@ -66,7 +112,7 @@ export function usePatientSheetForm({
     event.preventDefault()
 
     if (!organizationId || !userId) {
-      toast.error("Select an organization and sign in before saving patients.")
+      toast.error(t("toasts.missingContext"))
       return
     }
 
@@ -76,24 +122,37 @@ export function usePatientSheetForm({
     const admissionDate = formState.admissionDate.trim()
     const surgeryDate = formState.surgeryDate.trim()
     const serviceName = formState.serviceName.trim()
+    const identifierCode = normalizeIdentifierCode(formState.identifierCode)
     const initials =
       fullName.length > 0
         ? generatePatientInitials(fullName, locale)
         : patient?.initials.trim() ?? ""
 
-    if ((!fullName && !isEditing) || !initials || !diagnosis || !admissionDate) {
-      toast.error("Full name, diagnosis, and admission date are required.")
+    if (
+      (!fullName && !isEditing) ||
+      !initials ||
+      !diagnosis ||
+      !admissionDate ||
+      !identifierCode
+    ) {
+      toast.error(t("toasts.requiredFields"))
+      return
+    }
+
+    if (!isValidIdentifierCode(identifierCode)) {
+      toast.error(t("toasts.invalidIdentifierCode"))
       return
     }
 
     setIsSaving(true)
 
     try {
-      const result = await upsertPatient({
+      await upsertPatient({
         patientId: patient?._id,
         organizationId,
         userId,
         initials,
+        identifierCode,
         bedId,
         diagnosis,
         admissionDate: toClinicalIsoDate(admissionDate),
@@ -102,26 +161,17 @@ export function usePatientSheetForm({
       })
 
       if (fullName) {
-        setPatientName(result.patientId, fullName)
+        setPatientName({
+          fullName,
+          identifierCode,
+          initials,
+        })
       }
 
-      toast.success(
-        isEditing
-          ? "Patient workflow record updated."
-          : "Patient workflow record created."
-      )
+      toast.success(t(isEditing ? "toasts.updated" : "toasts.created"))
       onOpenChange(false)
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Unable to save the patient workflow record."
-
-      toast.error(
-        errorMessage === "TRIAL_LIMIT_REACHED"
-          ? "The free-trial patient limit has been reached. Upgrade to Premium to add more patients."
-          : errorMessage
-      )
+      toast.error(resolvePatientSheetErrorMessage(error, t))
     } finally {
       setIsSaving(false)
     }
@@ -130,6 +180,7 @@ export function usePatientSheetForm({
   return {
     formState,
     handleFieldChange,
+    handleValueChange,
     handleSubmit,
     isEditing,
     isSaving,

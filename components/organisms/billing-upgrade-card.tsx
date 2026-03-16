@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
 import { IyzicoCheckoutEmbed } from "@/components/organisms/iyzico-checkout-embed"
@@ -29,6 +30,7 @@ export function BillingUpgradeCard({
   isPremium,
   organizationId,
 }: Readonly<BillingUpgradeCardProps>) {
+  const t = useTranslations("BillingUpgradeCard")
   const searchParams = useSearchParams()
   const [checkoutFormContent, setCheckoutFormContent] = useState<string | null>(null)
   const [isStartingCheckout, setIsStartingCheckout] = useState(false)
@@ -44,12 +46,12 @@ export function BillingUpgradeCard({
     lastPaymentStatusRef.current = paymentStatus
 
     if (paymentStatus === "true") {
-      toast.success("WardOS Premium has been activated for this clinic.")
+      toast.success(t("toasts.activated"))
       return
     }
 
-    toast.error("Iyzico payment verification did not complete successfully.")
-  }, [searchParams])
+    toast.error(t("toasts.verificationError"))
+  }, [searchParams, t])
 
   const handleUpgradeToPremium = async (): Promise<void> => {
     setIsStartingCheckout(true)
@@ -66,7 +68,7 @@ export function BillingUpgradeCard({
       const data = (await response.json()) as CheckoutResponse
 
       if (!response.ok) {
-        throw new Error(data.error || "Unable to initialize the Iyzico checkout.")
+        throw new Error(data.error || t("toasts.initializeError"))
       }
 
       if (data.redirectUrl) {
@@ -75,16 +77,14 @@ export function BillingUpgradeCard({
       }
 
       if (!data.checkoutFormContent) {
-        throw new Error("No Iyzico checkout content was returned.")
+        throw new Error(t("toasts.missingCheckoutContent"))
       }
 
       setCheckoutFormContent(data.checkoutFormContent)
-      toast.success("Iyzico checkout initialized. Complete the payment below.")
+      toast.success(t("toasts.initialized"))
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Unable to initialize the Iyzico checkout."
+        error instanceof Error ? error.message : t("toasts.initializeError")
       )
     } finally {
       setIsStartingCheckout(false)
@@ -95,16 +95,12 @@ export function BillingUpgradeCard({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Upgrade to Premium</CardTitle>
-          <CardDescription>
-            Start the Iyzico checkout flow for this clinic organization and unlock
-            Premium immediately after successful payment verification.
-          </CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Premium removes the 50-patient PLG cap while keeping the existing
-            tenant-aware and privacy-preserving architecture unchanged.
+            {t("body")}
           </p>
           <Button
             type="button"
@@ -114,10 +110,10 @@ export function BillingUpgradeCard({
             }}
           >
             {isPremium
-              ? "Premium is active"
+              ? t("actions.active")
               : isStartingCheckout
-                ? "Starting checkout..."
-                : "Upgrade to Premium via Iyzico"}
+                ? t("actions.starting")
+                : t("actions.start")}
           </Button>
         </CardContent>
       </Card>
@@ -125,11 +121,8 @@ export function BillingUpgradeCard({
       {checkoutFormContent ? (
         <Card>
           <CardHeader>
-            <CardTitle>Iyzico checkout</CardTitle>
-            <CardDescription>
-              Complete the secure payment form below. You will return to Billing
-              automatically after Iyzico posts the callback.
-            </CardDescription>
+            <CardTitle>{t("checkout.title")}</CardTitle>
+            <CardDescription>{t("checkout.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <IyzicoCheckoutEmbed checkoutFormContent={checkoutFormContent} />

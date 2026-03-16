@@ -2,13 +2,13 @@
 
 import { Globe, Loader2Icon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
-import { type ReadonlyURLSearchParams, usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
+import { usePathname, useRouter } from "@/i18n/navigation"
 import type { AppLocale } from "@/i18n/routing"
 import { routing } from "@/i18n/routing"
-import { stripLocalePrefix } from "@/lib/auth-paths"
 import { cn } from "@/lib/utils"
 
 const LOCALE_SHORT_LABELS: Record<AppLocale, string> = {
@@ -23,18 +23,6 @@ type LanguageSwitcherProps = {
 function getNextLocale(locale: AppLocale): AppLocale {
   const localeIndex = routing.locales.indexOf(locale)
   return routing.locales[(localeIndex + 1) % routing.locales.length] as AppLocale
-}
-
-function getLocalizedHref(
-  pathname: string,
-  locale: AppLocale,
-  searchParams: ReadonlyURLSearchParams
-): string {
-  const cleanPathname = stripLocalePrefix(pathname)
-  const localizedPathname = cleanPathname === "/" ? `/${locale}` : `/${locale}${cleanPathname}`
-  const queryString = searchParams.toString()
-
-  return queryString ? `${localizedPathname}?${queryString}` : localizedPathname
 }
 
 export function LanguageSwitcher({
@@ -53,11 +41,11 @@ export function LanguageSwitcher({
       return
     }
 
-    const nextPathname = getLocalizedHref(pathname, nextLocale, searchParams)
+    const queryString = searchParams.toString()
+    const href = queryString ? `${pathname}?${queryString}` : pathname
 
     startTransition(() => {
-      router.replace(nextPathname)
-      router.refresh()
+      router.replace(href, { locale: nextLocale })
     })
   }
 

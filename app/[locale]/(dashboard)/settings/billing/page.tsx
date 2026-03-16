@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs"
 import { useQuery } from "convex/react"
 import { CreditCard, Crown, ShieldCheck } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 import { api } from "@/convex/_generated/api"
 import { BillingUpgradeCard } from "@/components/organisms/billing-upgrade-card"
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/card"
 import { usePLGLimits } from "@/hooks/usePLGLimits"
 import {
-  formatSubscriptionStatusLabel,
+  getSubscriptionStatusKey,
   normalizeSubscriptionStatus,
 } from "@/lib/commercial"
 
@@ -35,6 +36,7 @@ function BillingStateCard({
 }
 
 export default function BillingSettingsPage() {
+  const t = useTranslations("BillingPage")
   const { isLoaded, orgId } = useAuth()
   const organization = useQuery(
     api.organizations.getOrganizationByClerkId,
@@ -46,8 +48,8 @@ export default function BillingSettingsPage() {
   if (!isLoaded) {
     return (
       <BillingStateCard
-        title="Billing"
-        description="Loading organization billing profile..."
+        title={t("state.title")}
+        description={t("state.loadingOrganization")}
       />
     )
   }
@@ -55,8 +57,8 @@ export default function BillingSettingsPage() {
   if (!orgId) {
     return (
       <BillingStateCard
-        title="Billing"
-        description="Select a clinic organization to manage subscription settings."
+        title={t("state.title")}
+        description={t("state.selectOrganization")}
       />
     )
   }
@@ -64,13 +66,16 @@ export default function BillingSettingsPage() {
   if (organization === undefined) {
     return (
       <BillingStateCard
-        title="Billing"
-        description="Loading subscription status and patient usage..."
+        title={t("state.title")}
+        description={t("state.loadingUsage")}
       />
     )
   }
 
   const resolvedSubscriptionStatus = normalizeSubscriptionStatus(subscriptionStatus)
+  const subscriptionStatusLabel = t(
+    `statuses.${getSubscriptionStatusKey(resolvedSubscriptionStatus)}`
+  )
   const isPremium = resolvedSubscriptionStatus === "active"
 
   return (
@@ -78,63 +83,64 @@ export default function BillingSettingsPage() {
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">Billing</Badge>
+            <Badge variant="outline">{t("badges.title")}</Badge>
             <Badge variant={isPremium ? "default" : "secondary"}>
-              {formatSubscriptionStatusLabel(resolvedSubscriptionStatus)}
+              {subscriptionStatusLabel}
             </Badge>
-            {isLocked ? <Badge variant="destructive">Upgrade required</Badge> : null}
+            {isLocked ? <Badge variant="destructive">{t("badges.upgradeRequired")}</Badge> : null}
           </div>
-          <CardTitle>{organizationName ?? "Current clinic"} subscription</CardTitle>
-          <CardDescription>
-            Manage the commercial layer for WardOS, including PLG limits and the
-            future Premium billing flow.
-          </CardDescription>
+          <CardTitle>
+            {t("subscriptionTitle", {
+              organizationName: organizationName ?? t("currentClinic"),
+            })}
+          </CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 lg:grid-cols-3">
           <div className="rounded-xl border p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Current status
+              {t("cards.currentStatus.label")}
             </p>
             <p className="mt-3 text-2xl font-semibold tracking-tight">
-              {formatSubscriptionStatusLabel(resolvedSubscriptionStatus)}
+              {subscriptionStatusLabel}
             </p>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {isPremium
-                ? "Premium billing is active for this clinic organization."
-                : "This clinic is still on the free commercial tier."}
+                ? t("cards.currentStatus.active")
+                : t("cards.currentStatus.trial")}
             </p>
           </div>
 
           <div className="rounded-xl border p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Patient usage
+              {t("cards.patientUsage.label")}
             </p>
             <p className="mt-3 text-2xl font-semibold tracking-tight">
               {patientCount} / {patientLimit}
             </p>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {isLocked
-                ? "The soft lock is active. Existing data stays visible, but patient-writing actions are paused."
-                : "The clinic can continue admitting patients until the free limit is reached."}
+                ? t("cards.patientUsage.locked")
+                : t("cards.patientUsage.unlocked")}
             </p>
           </div>
 
           <div className="rounded-xl border p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Premium includes
+              {t("cards.premiumIncludes.label")}
             </p>
             <div className="mt-3 space-y-3 text-sm leading-6 text-muted-foreground">
               <p className="flex items-start gap-2">
                 <Crown className="mt-1 size-4 shrink-0 text-primary" />
-                Unlimited active patient workflows beyond the free PLG threshold.
+                {t("cards.premiumIncludes.items.unlimitedPatients")}
               </p>
               <p className="flex items-start gap-2">
                 <CreditCard className="mt-1 size-4 shrink-0 text-primary" />
-                Iyzico checkout scaffolding with callback-based Premium activation.
+                {t("cards.premiumIncludes.items.iyzico")}
               </p>
               <p className="flex items-start gap-2">
                 <ShieldCheck className="mt-1 size-4 shrink-0 text-primary" />
-                Zero-liability privacy model preserved with local full-name storage.
+                {t("cards.premiumIncludes.items.privacy")}
               </p>
             </div>
           </div>

@@ -183,7 +183,18 @@
       "conflict": "Patient was updated by another user. Please refresh."
     },
     "clinicalRequirements": {
-      "banner": "Required Actions: {items}"
+      "banner": "Required Actions: {items}",
+      "pending": "To Do",
+      "completed": "Done",
+      "ruleTag": "Rule",
+      "addPlaceholder": "Add a task...",
+      "toasts": {
+        "completed": "{item} marked as done.",
+        "uncompleted": "{item} marked as pending.",
+        "todoAdded": "Task added.",
+        "todoDeleted": "Task removed.",
+        "error": "Unable to update."
+      }
     }
   },
   "SettingsLayout": {

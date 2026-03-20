@@ -36,6 +36,27 @@ export default defineSchema({
     serviceName: v.optional(v.string()),
     /** Optimistic-lock counter for concurrent edit detection (see Phase 10.3). */
     version: v.optional(v.number()),
+    /** Completed clinical requirements with completion timestamps. */
+    completedRequirements: v.optional(
+      v.array(
+        v.object({
+          item: v.string(),
+          completedAt: v.string(),
+        })
+      )
+    ),
+    /** Custom todos added manually for this patient. */
+    customTodos: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          completed: v.boolean(),
+          createdAt: v.string(),
+          completedAt: v.optional(v.string()),
+        })
+      )
+    ),
   })
     .index("by_organization_id", ["organizationId"])
     .index("by_organization_bed_id", ["organizationId", "bedId"]),

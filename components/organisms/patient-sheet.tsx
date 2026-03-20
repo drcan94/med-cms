@@ -18,7 +18,7 @@ export function PatientSheet(props: Readonly<PatientSheetProps>) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full p-0 sm:max-w-xl">
+      <SheetContent className="w-full p-0 sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-5xl">
         <PatientSheetForm
           key={`${patient?._id ?? "new"}:${open ? "open" : "closed"}`}
           onOpenChange={onOpenChange}

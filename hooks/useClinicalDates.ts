@@ -17,10 +17,9 @@ function parseClinicalDate(value: string): Date | null {
 }
 
 /**
- * Clinical day counters should follow the workstation's local calendar rather
- * than UTC midnight. Parsing ISO strings and comparing them against the local
- * start of today prevents off-by-one shifts when stored timestamps include a
- * timezone offset but clinicians still reason in local calendar days.
+ * Clinical day counters follow local calendar conventions:
+ * - Admission day = Day 1 (not 0) — patient's first day in the ward
+ * - Post-op day = Day 0 on surgery day — standard surgical notation (PO 0, PO 1, etc.)
  */
 export function calculateClinicalDays(
   admissionDate: string,
@@ -29,8 +28,8 @@ export function calculateClinicalDays(
   const today = startOfToday()
   const parsedAdmissionDate = parseClinicalDate(admissionDate)
   const admittedDays = parsedAdmissionDate
-    ? Math.max(differenceInCalendarDays(today, parsedAdmissionDate), 0)
-    : 0
+    ? Math.max(differenceInCalendarDays(today, parsedAdmissionDate) + 1, 1)
+    : 1
 
   if (!surgeryDate) {
     return {

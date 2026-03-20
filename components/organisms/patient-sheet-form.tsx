@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo } from "react"
-import { useQuery } from "convex/react"
+import { useMemo, useState } from "react"
+import { useMutation, useQuery } from "convex/react"
 import { useLocale, useTranslations } from "next-intl"
+import { toast } from "sonner"
 
 import { api } from "@/convex/_generated/api"
 import type { Doc } from "@/convex/_generated/dataModel"
@@ -49,6 +50,11 @@ export function PatientSheetForm({
 }: Readonly<PatientSheetFormProps>) {
   const locale = useLocale() as AppLocale
   const t = useTranslations("PatientSheet")
+  const [loadingItem, setLoadingItem] = useState<string | null>(null)
+  const toggleRequirement = useMutation(api.patients.toggleClinicalRequirement)
+  const addTodo = useMutation(api.patients.addCustomTodo)
+  const toggleTodo = useMutation(api.patients.toggleCustomTodo)
+  const deleteTodo = useMutation(api.patients.deleteCustomTodo)
   const clinicSettings = useQuery(
     api.clinicSettings.getClinicSettings,
     open && organizationId ? { organizationId } : "skip"
@@ -96,138 +102,268 @@ export function PatientSheetForm({
     wardLayout: clinicSettings?.wardLayout,
   })
 
+  const handleToggleRequirement = async (item: string, completed: boolean) => {
+    if (!patient || !organizationId || !userId) {
+      toast.error(t("toasts.missingContext"))
+      return
+    }
+
+    setLoadingItem(item)
+
+    try {
+      await toggleRequirement({
+        completed,
+        item,
+        organizationId,
+        patientId: patient._id,
+        userId,
+      })
+      toast.success(
+        completed
+          ? t("clinicalRequirements.toasts.completed", { item })
+          : t("clinicalRequirements.toasts.uncompleted", { item })
+      )
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("clinicalRequirements.toasts.error")
+      )
+    } finally {
+      setLoadingItem(null)
+    }
+  }
+
+  const handleAddTodo = async (text: string) => {
+    if (!patient || !organizationId || !userId) {
+      toast.error(t("toasts.missingContext"))
+      return
+    }
+
+    try {
+      await addTodo({
+        organizationId,
+        patientId: patient._id,
+        text,
+        userId,
+      })
+      toast.success(t("clinicalRequirements.toasts.todoAdded"))
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("clinicalRequirements.toasts.error")
+      )
+    }
+  }
+
+  const handleToggleTodo = async (todoId: string, completed: boolean) => {
+    if (!patient || !organizationId || !userId) {
+      toast.error(t("toasts.missingContext"))
+      return
+    }
+
+    setLoadingItem(todoId)
+
+    try {
+      await toggleTodo({
+        completed,
+        organizationId,
+        patientId: patient._id,
+        todoId,
+        userId,
+      })
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("clinicalRequirements.toasts.error")
+      )
+    } finally {
+      setLoadingItem(null)
+    }
+  }
+
+  const handleDeleteTodo = async (todoId: string) => {
+    if (!patient || !organizationId || !userId) {
+      toast.error(t("toasts.missingContext"))
+      return
+    }
+
+    setLoadingItem(todoId)
+
+    try {
+      await deleteTodo({
+        organizationId,
+        patientId: patient._id,
+        todoId,
+        userId,
+      })
+      toast.success(t("clinicalRequirements.toasts.todoDeleted"))
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("clinicalRequirements.toasts.error")
+      )
+    } finally {
+      setLoadingItem(null)
+    }
+  }
+
+  const hasRequirements = matchedClinicalItems.length > 0 || 
+    (patient?.completedRequirements?.length ?? 0) > 0 ||
+    (patient?.customTodos?.length ?? 0) > 0 ||
+    isEditing
+
   return (
     <form onSubmit={handleSubmit} className="flex h-full flex-col">
-      <SheetHeader className="border-b">
+      <SheetHeader className="shrink-0 border-b">
         <SheetTitle>{t(isEditing ? "titles.editing" : "titles.new")}</SheetTitle>
         <SheetDescription className="leading-6">{t("description")}</SheetDescription>
       </SheetHeader>
 
-      <div className="flex-1 space-y-6 overflow-y-auto p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">{t("fields.fullName.label")}</Label>
-            <Input
-              id="fullName"
-              value={formState.fullName}
-              onChange={handleFieldChange("fullName")}
-              placeholder={t("fields.fullName.placeholder")}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4 lg:border-r">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="fullName" className="text-xs">{t("fields.fullName.label")}</Label>
+              <Input
+                id="fullName"
+                value={formState.fullName}
+                onChange={handleFieldChange("fullName")}
+                placeholder={t("fields.fullName.placeholder")}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="initials" className="text-xs">{t("fields.initials.label")}</Label>
+              <Input
+                id="initials"
+                value={initialsPreview}
+                placeholder={t("fields.initials.placeholder")}
+                className="h-9 bg-muted/50"
+                readOnly
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="identifierCode" className="text-xs">{t("fields.identifierCode.label")}</Label>
+              <Input
+                id="identifierCode"
+                value={formState.identifierCode}
+                onChange={handleFieldChange("identifierCode")}
+                placeholder={t("fields.identifierCode.placeholder")}
+                autoCapitalize="characters"
+                autoComplete="off"
+                className="h-9"
+                maxLength={4}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="bedId" className="text-xs">{t("fields.bedId.label")}</Label>
+              <Select
+                value={formState.bedId || STAGING_BED_ID}
+                onValueChange={handleValueChange("bedId")}
+              >
+                <SelectTrigger id="bedId" className="h-9">
+                  <SelectValue placeholder={t("fields.bedId.placeholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bedOptions.map((bed) => (
+                    <SelectItem key={bed.value} value={bed.value}>
+                      {bed.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="serviceName" className="text-xs">{t("fields.serviceName.label")}</Label>
+              <Input
+                id="serviceName"
+                value={formState.serviceName}
+                onChange={handleFieldChange("serviceName")}
+                placeholder={t("fields.serviceName.placeholder")}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="procedureName" className="text-xs">{t("fields.procedureName.label")}</Label>
+              <Input
+                id="procedureName"
+                value={formState.procedureName}
+                onChange={handleFieldChange("procedureName")}
+                placeholder={t("fields.procedureName.placeholder")}
+                className="h-9"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="admissionDate" className="text-xs">{t("fields.admissionDate.label")}</Label>
+              <Input
+                id="admissionDate"
+                type="date"
+                value={formState.admissionDate}
+                onChange={handleFieldChange("admissionDate")}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="surgeryDate" className="text-xs">{t("fields.surgeryDate.label")}</Label>
+              <Input
+                id="surgeryDate"
+                type="date"
+                value={formState.surgeryDate}
+                onChange={handleFieldChange("surgeryDate")}
+                className="h-9"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="diagnosis" className="text-xs">{t("fields.diagnosis.label")}</Label>
+            <Textarea
+              id="diagnosis"
+              value={formState.diagnosis}
+              onChange={handleFieldChange("diagnosis")}
+              placeholder={t("fields.diagnosis.placeholder")}
+              className="min-h-[80px] resize-none lg:min-h-[100px]"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="initials">{t("fields.initials.label")}</Label>
-            <Input
-              id="initials"
-              value={initialsPreview}
-              placeholder={t("fields.initials.placeholder")}
-              readOnly
+
+          <div className="lg:hidden">
+            <PatientClinicalRequirementsAlert
+              completedRequirements={patient?.completedRequirements}
+              customTodos={patient?.customTodos}
+              items={matchedClinicalItems}
+              loading={loadingItem}
+              onAddTodo={isEditing ? handleAddTodo : undefined}
+              onDeleteTodo={isEditing ? handleDeleteTodo : undefined}
+              onToggle={isEditing ? handleToggleRequirement : undefined}
+              onToggleTodo={isEditing ? handleToggleTodo : undefined}
             />
+          </div>
+
+          <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
+            {t("privacyNote")}
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="identifierCode">{t("fields.identifierCode.label")}</Label>
-            <Input
-              id="identifierCode"
-              value={formState.identifierCode}
-              onChange={handleFieldChange("identifierCode")}
-              placeholder={t("fields.identifierCode.placeholder")}
-              autoCapitalize="characters"
-              autoComplete="off"
-              maxLength={4}
-              required
-            />
-            <p className="text-xs leading-5 text-muted-foreground">
-              {t("fields.identifierCode.description")}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bedId">{t("fields.bedId.label")}</Label>
-            <Select
-              value={formState.bedId || STAGING_BED_ID}
-              onValueChange={handleValueChange("bedId")}
-            >
-              <SelectTrigger id="bedId">
-                <SelectValue placeholder={t("fields.bedId.placeholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {bedOptions.map((bed) => (
-                  <SelectItem key={bed.value} value={bed.value}>
-                    {bed.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs leading-5 text-muted-foreground">
-              {t("fields.bedId.description")}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="serviceName">{t("fields.serviceName.label")}</Label>
-            <Input
-              id="serviceName"
-              value={formState.serviceName}
-              onChange={handleFieldChange("serviceName")}
-              placeholder={t("fields.serviceName.placeholder")}
+        {hasRequirements ? (
+          <div className="hidden w-80 shrink-0 overflow-y-auto bg-muted/20 p-4 lg:block xl:w-96">
+            <PatientClinicalRequirementsAlert
+              completedRequirements={patient?.completedRequirements}
+              customTodos={patient?.customTodos}
+              items={matchedClinicalItems}
+              loading={loadingItem}
+              onAddTodo={isEditing ? handleAddTodo : undefined}
+              onDeleteTodo={isEditing ? handleDeleteTodo : undefined}
+              onToggle={isEditing ? handleToggleRequirement : undefined}
+              onToggleTodo={isEditing ? handleToggleTodo : undefined}
             />
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="diagnosis">{t("fields.diagnosis.label")}</Label>
-          <Textarea
-            id="diagnosis"
-            value={formState.diagnosis}
-            onChange={handleFieldChange("diagnosis")}
-            placeholder={t("fields.diagnosis.placeholder")}
-          />
-        </div>
-
-        <PatientClinicalRequirementsAlert items={matchedClinicalItems} />
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="admissionDate">{t("fields.admissionDate.label")}</Label>
-            <Input
-              id="admissionDate"
-              type="date"
-              value={formState.admissionDate}
-              onChange={handleFieldChange("admissionDate")}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="surgeryDate">{t("fields.surgeryDate.label")}</Label>
-            <Input
-              id="surgeryDate"
-              type="date"
-              value={formState.surgeryDate}
-              onChange={handleFieldChange("surgeryDate")}
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="procedureName">{t("fields.procedureName.label")}</Label>
-            <Input
-              id="procedureName"
-              value={formState.procedureName}
-              onChange={handleFieldChange("procedureName")}
-              placeholder={t("fields.procedureName.placeholder")}
-            />
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-dashed px-4 py-3 text-xs leading-6 text-muted-foreground">
-          {t("privacyNote")}
-        </div>
+        ) : null}
       </div>
 
-      <SheetFooter className="border-t">
+      <SheetFooter className="shrink-0 border-t">
         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
           {t("actions.cancel")}
         </Button>

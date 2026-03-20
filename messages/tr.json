@@ -183,7 +183,18 @@
       "conflict": "Hasta başka bir kullanıcı tarafından güncellendi. Lütfen yenileyin."
     },
     "clinicalRequirements": {
-      "banner": "Klinik Gereksinimler: {items}"
+      "banner": "Klinik Gereksinimler: {items}",
+      "pending": "Yapılacaklar",
+      "completed": "Tamamlananlar",
+      "ruleTag": "Kural",
+      "addPlaceholder": "Görev ekle...",
+      "toasts": {
+        "completed": "{item} tamamlandı olarak işaretlendi.",
+        "uncompleted": "{item} beklemede olarak işaretlendi.",
+        "todoAdded": "Görev eklendi.",
+        "todoDeleted": "Görev silindi.",
+        "error": "Güncelleme başarısız."
+      }
     }
   },
   "SettingsLayout": {

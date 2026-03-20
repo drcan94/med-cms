@@ -215,3 +215,227 @@ export const updatePatientBed = mutation({
     }
   },
 })
+
+export const toggleClinicalRequirement = mutation({
+  args: {
+    organizationId: v.string(),
+    patientId: v.id("patients"),
+    userId: v.string(),
+    item: v.string(),
+    completed: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const organizationId = requireText(args.organizationId, "Organization")
+    const userId = requireText(args.userId, "User")
+    const item = requireText(args.item, "Checklist item")
+    const patient = await ctx.db.get(args.patientId)
+
+    if (!patient) {
+      throw new Error("Patient record not found.")
+    }
+
+    if (patient.organizationId !== organizationId) {
+      throw new Error("You cannot update a patient outside your organization.")
+    }
+
+    const existingRequirements = patient.completedRequirements ?? []
+    let updatedRequirements: { item: string; completedAt: string }[]
+    let action: string
+
+    if (args.completed) {
+      const alreadyCompleted = existingRequirements.some((req) => req.item === item)
+
+      if (alreadyCompleted) {
+        return { patientId: args.patientId, action: "requirement.already_completed" }
+      }
+
+      updatedRequirements = [
+        ...existingRequirements,
+        {
+          item,
+          completedAt: new Date().toISOString(),
+        },
+      ]
+      action = `requirement.completed:${item}`
+    } else {
+      updatedRequirements = existingRequirements.filter((req) => req.item !== item)
+      action = `requirement.uncompleted:${item}`
+    }
+
+    await ctx.db.patch(args.patientId, {
+      completedRequirements: updatedRequirements,
+    })
+
+    await ctx.runMutation(internal.audit.recordAuditLog, {
+      action,
+      organizationId,
+      timestamp: Date.now(),
+      userId,
+    })
+
+    return {
+      action,
+      patientId: args.patientId,
+    }
+  },
+})
+
+export const addCustomTodo = mutation({
+  args: {
+    organizationId: v.string(),
+    patientId: v.id("patients"),
+    userId: v.string(),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const organizationId = requireText(args.organizationId, "Organization")
+    const userId = requireText(args.userId, "User")
+    const text = requireText(args.text, "Todo text")
+    const patient = await ctx.db.get(args.patientId)
+
+    if (!patient) {
+      throw new Error("Patient record not found.")
+    }
+
+    if (patient.organizationId !== organizationId) {
+      throw new Error("You cannot update a patient outside your organization.")
+    }
+
+    const existingTodos = patient.customTodos ?? []
+    const newTodo = {
+      id: `todo_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      text,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    }
+
+    await ctx.db.patch(args.patientId, {
+      customTodos: [...existingTodos, newTodo],
+    })
+
+    const action = `todo.added:${text}`
+
+    await ctx.runMutation(internal.audit.recordAuditLog, {
+      action,
+      organizationId,
+      timestamp: Date.now(),
+      userId,
+    })
+
+    return {
+      action,
+      patientId: args.patientId,
+      todoId: newTodo.id,
+    }
+  },
+})
+
+export const toggleCustomTodo = mutation({
+  args: {
+    organizationId: v.string(),
+    patientId: v.id("patients"),
+    userId: v.string(),
+    todoId: v.string(),
+    completed: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const organizationId = requireText(args.organizationId, "Organization")
+    const userId = requireText(args.userId, "User")
+    const patient = await ctx.db.get(args.patientId)
+
+    if (!patient) {
+      throw new Error("Patient record not found.")
+    }
+
+    if (patient.organizationId !== organizationId) {
+      throw new Error("You cannot update a patient outside your organization.")
+    }
+
+    const existingTodos = patient.customTodos ?? []
+    const todoIndex = existingTodos.findIndex((t) => t.id === args.todoId)
+
+    if (todoIndex === -1) {
+      throw new Error("Todo not found.")
+    }
+
+    const updatedTodos = existingTodos.map((todo) =>
+      todo.id === args.todoId
+        ? {
+            ...todo,
+            completed: args.completed,
+            completedAt: args.completed ? new Date().toISOString() : undefined,
+          }
+        : todo
+    )
+
+    await ctx.db.patch(args.patientId, {
+      customTodos: updatedTodos,
+    })
+
+    const todoText = existingTodos[todoIndex].text
+    const action = args.completed
+      ? `todo.completed:${todoText}`
+      : `todo.uncompleted:${todoText}`
+
+    await ctx.runMutation(internal.audit.recordAuditLog, {
+      action,
+      organizationId,
+      timestamp: Date.now(),
+      userId,
+    })
+
+    return {
+      action,
+      patientId: args.patientId,
+    }
+  },
+})
+
+export const deleteCustomTodo = mutation({
+  args: {
+    organizationId: v.string(),
+    patientId: v.id("patients"),
+    userId: v.string(),
+    todoId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const organizationId = requireText(args.organizationId, "Organization")
+    const userId = requireText(args.userId, "User")
+    const patient = await ctx.db.get(args.patientId)
+
+    if (!patient) {
+      throw new Error("Patient record not found.")
+    }
+
+    if (patient.organizationId !== organizationId) {
+      throw new Error("You cannot update a patient outside your organization.")
+    }
+
+    const existingTodos = patient.customTodos ?? []
+    const todo = existingTodos.find((t) => t.id === args.todoId)
+
+    if (!todo) {
+      throw new Error("Todo not found.")
+    }
+
+    const updatedTodos = existingTodos.filter((t) => t.id !== args.todoId)
+
+    await ctx.db.patch(args.patientId, {
+      customTodos: updatedTodos,
+    })
+
+    const action = `todo.deleted:${todo.text}`
+
+    await ctx.runMutation(internal.audit.recordAuditLog, {
+      action,
+      organizationId,
+      timestamp: Date.now(),
+      userId,
+    })
+
+    return {
+      action,
+      patientId: args.patientId,
+    }
+  },
+})

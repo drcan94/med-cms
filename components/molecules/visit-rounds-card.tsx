@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 
+import { formatCompactBedDisplay } from "@/lib/ward-layout"
 import { Badge } from "@/components/ui/badge"
 import { STAGING_BED_ID } from "@/lib/patient-privacy"
 import type { VisitSheetEntry } from "@/lib/visit-sheet"
@@ -19,9 +20,12 @@ export function VisitRoundsCard({
     entry.bedId === STAGING_BED_ID
       ? t("staging")
       : typeof entry.bedNumber === "number"
-        ? entry.roomName?.trim()
-          ? `${entry.roomName} - ${t("bedLabel", { number: entry.bedNumber })}`
-          : t("bedLabel", { number: entry.bedNumber })
+        ? formatCompactBedDisplay(
+            entry.roomName ?? "",
+            entry.bedNumber,
+            entry.roomBedCount ?? 0,
+            t("bedLabel", { number: entry.bedNumber })
+          )
         : entry.bedDisplay
 
   return (

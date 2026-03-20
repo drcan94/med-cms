@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 
+import { formatCompactBedDisplay } from "@/lib/ward-layout"
 import { STAGING_BED_ID } from "@/lib/patient-privacy"
 import type { VisitSheetEntry } from "@/lib/visit-sheet"
 
@@ -55,21 +56,24 @@ export function PrintableVisitSheet({
                 patient.bedId === STAGING_BED_ID
                   ? t("staging")
                   : typeof patient.bedNumber === "number"
-                    ? patient.roomName?.trim()
-                      ? `${patient.roomName} - ${t("bedLabel", { number: patient.bedNumber })}`
-                      : t("bedLabel", { number: patient.bedNumber })
+                    ? formatCompactBedDisplay(
+                        patient.roomName ?? "",
+                        patient.bedNumber,
+                        patient.roomBedCount ?? 0,
+                        t("bedLabel", { number: patient.bedNumber })
+                      )
                     : patient.bedDisplay
 
               return (
                 <tr key={patient.id} className="align-top [page-break-inside:avoid]">
-                <td className="border border-black px-2 py-2 font-semibold">
+                  <td className="border border-black px-2 py-2 font-semibold">
                     {localizedBedLabel}
-                </td>
-                <td className="border border-black px-2 py-2">{patient.fullName}</td>
-                <td className="border border-black px-2 py-2">{patient.daySummary}</td>
-                <td className="border border-black px-2 py-2">{patient.diagnosis}</td>
-                <td className="h-14 border border-black px-2 py-2" />
-                <td className="h-14 border border-black px-2 py-2" />
+                  </td>
+                  <td className="border border-black px-2 py-2">{patient.fullName}</td>
+                  <td className="border border-black px-2 py-2">{patient.daySummary}</td>
+                  <td className="border border-black px-2 py-2">{patient.diagnosis}</td>
+                  <td className="h-14 border border-black px-2 py-2" />
+                  <td className="h-14 border border-black px-2 py-2" />
                 </tr>
               )
             })

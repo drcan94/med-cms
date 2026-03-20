@@ -8,7 +8,7 @@ type PatientRecord = Doc<"patients">
 type BuildPatientBedOptionsArgs = {
   currentPatient: PatientRecord | null
   currentBedLabel: (bedId: string) => string
-  formatBedLabel: (roomName: string, bedNumber: number) => string
+  formatBedLabel: (roomName: string, bedNumber: number, roomBedCount: number) => string
   patients?: PatientRecord[]
   stagingLabel: string
   wardLayout?: WardRoom[]
@@ -46,7 +46,7 @@ export function buildPatientBedOptions({
       seenBedIds.add(bed.bedId)
       options.push({
         value: bed.bedId,
-        label: formatBedLabel(room.roomName, bed.bedNumber),
+        label: formatBedLabel(room.roomName, bed.bedNumber, room.beds.length),
       })
     }
   }

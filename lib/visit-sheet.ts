@@ -26,6 +26,7 @@ export type VisitSheetEntry = {
   fullName: string
   id: PatientRecord["_id"]
   initials: string
+  roomBedCount?: number
   roomName?: string
 }
 
@@ -94,6 +95,7 @@ export function buildVisitSheetEntries({
         }),
         id: patient._id,
         initials: patient.initials,
+        roomBedCount: bed?.roomBedCount,
         roomName: bed?.roomName,
       }
     })

@@ -20,6 +20,7 @@ export type WardBedMetadata = WardBedSlot & {
   bedDisplay: string
   order: number
   roomId: string
+  roomBedCount: number
   roomName: string
 }
 
@@ -102,9 +103,18 @@ export function buildWardRoomsWithBeds(
   })
 }
 
-export function formatBedDisplay(roomName: string, bedLabel: string): string {
+export function formatCompactBedDisplay(
+  roomName: string,
+  bedNumber: number,
+  roomBedCount: number,
+  fallbackLabel?: string
+): string {
   const normalizedRoomName = roomName.trim()
-  return normalizedRoomName ? `${normalizedRoomName} - ${bedLabel}` : bedLabel
+  if (normalizedRoomName) {
+    return roomBedCount <= 1 ? normalizedRoomName : `${normalizedRoomName}/${bedNumber}`
+  }
+
+  return fallbackLabel ?? `Bed ${bedNumber}`
 }
 
 export function buildWardBedMetadata(
@@ -121,9 +131,15 @@ export function buildWardBedMetadata(
 
       bedMetadata.set(bed.bedId, {
         ...bed,
-        bedDisplay: formatBedDisplay(room.roomName, bed.bedLabel),
+        bedDisplay: formatCompactBedDisplay(
+          room.roomName,
+          bed.bedNumber,
+          room.beds.length,
+          bed.bedLabel
+        ),
         order,
         roomId: room.roomId,
+        roomBedCount: room.beds.length,
         roomName: room.roomName,
       })
       order += 1

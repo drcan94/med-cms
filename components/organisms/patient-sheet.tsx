@@ -10,7 +10,7 @@ import { usePatientSheetForm } from "@/hooks/usePatientSheetForm"
 import type { AppLocale } from "@/i18n/routing"
 import { buildPatientBedOptions } from "@/lib/patient-bed-options"
 import { STAGING_BED_ID, generatePatientInitials } from "@/lib/patient-privacy"
-import { buildWardBedMetadata } from "@/lib/ward-layout"
+import { buildWardBedMetadata, formatCompactBedDisplay } from "@/lib/ward-layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -88,12 +88,20 @@ function PatientSheetForm({
         return t("fields.bedId.options.currentBed")
       }
 
-      const bedLabel = t("fields.bedId.options.bedLabel", { number: bed.bedNumber })
-      return bed.roomName.trim() ? `${bed.roomName} - ${bedLabel}` : bedLabel
+      return formatCompactBedDisplay(
+        bed.roomName,
+        bed.bedNumber,
+        bed.roomBedCount,
+        t("fields.bedId.options.bedLabel", { number: bed.bedNumber })
+      )
     },
-    formatBedLabel: (roomName, bedNumber) => {
-      const bedLabel = t("fields.bedId.options.bedLabel", { number: bedNumber })
-      return roomName.trim() ? `${roomName} - ${bedLabel}` : bedLabel
+    formatBedLabel: (roomName, bedNumber, roomBedCount) => {
+      return formatCompactBedDisplay(
+        roomName,
+        bedNumber,
+        roomBedCount,
+        t("fields.bedId.options.bedLabel", { number: bedNumber })
+      )
     },
     patients,
     stagingLabel: t("fields.bedId.options.staging"),

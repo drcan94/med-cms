@@ -1,4 +1,4 @@
-import type { WardBedMetadata } from "@/lib/ward-layout"
+import { type WardBedMetadata, formatCompactBedDisplay } from "@/lib/ward-layout"
 import { STAGING_BED_ID } from "@/lib/patient-privacy"
 
 type WardMapTranslator = (key: string, values?: Record<string, string | number>) => string
@@ -17,8 +17,12 @@ export function getWardMapBedDisplayLabel(
     return bedId
   }
 
-  const bedLabel = t("bedLabel", { number: bed.bedNumber })
-  return bed.roomName.trim() ? `${bed.roomName} - ${bedLabel}` : bedLabel
+  return formatCompactBedDisplay(
+    bed.roomName,
+    bed.bedNumber,
+    bed.roomBedCount,
+    t("bedLabel", { number: bed.bedNumber })
+  )
 }
 
 export function resolveWardMapErrorMessage(

@@ -1,6 +1,7 @@
 "use client"
 
 import { Draggable } from "@hello-pangea/dnd"
+import { ClipboardList } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 import type { Doc } from "@/convex/_generated/dataModel"
@@ -9,6 +10,11 @@ import type { ConventionRule } from "@/lib/clinic-settings"
 import { evaluatePatientRules } from "@/lib/rule-engine"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type PatientRecord = Doc<"patients">
 
@@ -84,7 +90,7 @@ export function WardPatientCard({
             }
           }}
           className={cn(
-            "grid gap-3 rounded-xl border bg-background p-3 shadow-xs",
+            "grid gap-3 overflow-hidden rounded-xl border bg-background p-3 shadow-xs",
             draggingEnabled
               ? "cursor-grab active:cursor-grabbing"
               : "cursor-default opacity-90",
@@ -92,23 +98,27 @@ export function WardPatientCard({
           )}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
+            <div className="min-w-0 flex-1 space-y-1">
               <p className="flex flex-wrap items-center gap-2 text-sm font-semibold tracking-tight">
-                <span>{patient.initials}</span>
+                <span className="truncate">{patient.initials}</span>
                 {hasClinicalRequirements ? (
-                  <span
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-amber-500/50 bg-amber-100 text-xs text-amber-950 dark:bg-amber-950/50 dark:text-amber-50"
-                    title={t("clinicalRequirementsIndicator")}
-                  >
-                    ⚠️
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex size-6 shrink-0 cursor-help items-center justify-center rounded-full border border-amber-500/50 bg-amber-100 text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-400">
+                        <ClipboardList className="size-3.5" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="text-xs font-medium">{t("clinicalRequirementsIndicator")}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 ) : null}
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {showsLocalName ? fullName : t("localNameUnavailable")}
               </p>
             </div>
-            <Badge variant="outline">
+            <Badge variant="outline" className="shrink-0 whitespace-nowrap">
               {t("daySummary", {
                 admittedDays: clinicalDays.admittedDays,
                 postOpDays: clinicalDays.postOpDays,
@@ -117,19 +127,19 @@ export function WardPatientCard({
           </div>
 
           {patient.serviceName ? (
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {t("service")}
               </p>
-              <p className="text-sm leading-5 text-foreground">{patient.serviceName}</p>
+              <p className="truncate text-sm leading-5 text-foreground">{patient.serviceName}</p>
             </div>
           ) : null}
 
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {t("diagnosis")}
             </p>
-            <p className="text-sm leading-5 text-foreground">{patient.diagnosis}</p>
+            <p className="line-clamp-2 text-sm leading-5 text-foreground">{patient.diagnosis}</p>
           </div>
         </article>
       )}

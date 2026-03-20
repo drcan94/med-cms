@@ -7,6 +7,7 @@ import { getLocale, getMessages } from "next-intl/server"
 import { ConvexClientProvider } from "@/components/convex-client-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { getAuthPathnames } from "@/lib/auth-paths"
 import { cn } from "@/lib/utils"
 
@@ -61,7 +62,9 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <NextIntlClientProvider locale={locale} messages={messages}>
-              <ConvexClientProvider>{children}</ConvexClientProvider>
+              <TooltipProvider>
+                <ConvexClientProvider>{children}</ConvexClientProvider>
+              </TooltipProvider>
             </NextIntlClientProvider>
             <Toaster closeButton position="top-right" richColors />
           </ThemeProvider>

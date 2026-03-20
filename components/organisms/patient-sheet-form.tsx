@@ -13,7 +13,6 @@ import { parseConventionRules } from "@/lib/clinic-settings"
 import { STAGING_BED_ID, generatePatientInitials } from "@/lib/patient-privacy"
 import { evaluatePatientRules } from "@/lib/rule-engine"
 import { PatientClinicalRequirementsAlert } from "@/components/molecules/patient-clinical-requirements-alert"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -100,10 +99,6 @@ export function PatientSheetForm({
   return (
     <form onSubmit={handleSubmit} className="flex h-full flex-col">
       <SheetHeader className="border-b">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">{t(isEditing ? "badges.editing" : "badges.new")}</Badge>
-          <Badge variant="secondary">{t("badges.privacy")}</Badge>
-        </div>
         <SheetTitle>{t(isEditing ? "titles.editing" : "titles.new")}</SheetTitle>
         <SheetDescription className="leading-6">{t("description")}</SheetDescription>
       </SheetHeader>

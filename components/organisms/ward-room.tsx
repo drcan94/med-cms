@@ -4,6 +4,7 @@ import { Droppable } from "@hello-pangea/dnd"
 import { useTranslations } from "next-intl"
 
 import type { Doc } from "@/convex/_generated/dataModel"
+import type { ConventionRule } from "@/lib/clinic-settings"
 import { WardPatientCard } from "@/components/molecules/ward-patient-card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -19,6 +20,7 @@ import type { WardRoomWithBeds } from "@/lib/ward-layout"
 type PatientRecord = Doc<"patients">
 
 type WardRoomProps = {
+  conventionRules?: readonly ConventionRule[]
   draggingEnabled?: boolean
   getPatientName: (patient: PatientRecord) => string
   onSelectPatient?: (patient: PatientRecord) => void
@@ -27,6 +29,7 @@ type WardRoomProps = {
 }
 
 export function WardRoom({
+  conventionRules,
   draggingEnabled = true,
   getPatientName,
   onSelectPatient,
@@ -88,6 +91,7 @@ export function WardRoom({
 
                   {patient ? (
                     <WardPatientCard
+                      conventionRules={conventionRules}
                       draggingEnabled={draggingEnabled}
                       fullName={getPatientName(patient)}
                       index={0}

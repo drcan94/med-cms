@@ -59,6 +59,7 @@ export const upsertPatient = mutation({
     admissionDate: v.string(),
     surgeryDate: v.optional(v.string()),
     serviceName: v.optional(v.string()),
+    version: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const patientFields = sanitizePatientFields(args)
@@ -96,7 +97,21 @@ export const upsertPatient = mutation({
         throw new Error("You cannot update a patient outside your organization.")
       }
 
-      await ctx.db.patch(patientId, patientFields)
+      const serverVersion = existingPatient.version ?? 0
+      const clientVersion = args.version ?? 0
+
+      if (clientVersion !== serverVersion) {
+        throw new Error(
+          "CONFLICT: This patient was updated by another user. Please refresh and try again."
+        )
+      }
+
+      const nextVersion = serverVersion + 1
+
+      await ctx.db.patch(patientId, {
+        ...patientFields,
+        version: nextVersion,
+      })
       action = `patient.updated:${patientFields.bedId}`
     } else {
       const [organization, patients] = await Promise.all([
@@ -125,7 +140,10 @@ export const upsertPatient = mutation({
         throw new Error("TRIAL_LIMIT_REACHED")
       }
 
-      patientId = await ctx.db.insert("patients", patientFields)
+      patientId = await ctx.db.insert("patients", {
+        ...patientFields,
+        version: 1,
+      })
     }
 
     await ctx.runMutation(internal.audit.recordAuditLog, {

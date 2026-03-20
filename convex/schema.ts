@@ -33,6 +33,8 @@ export default defineSchema({
     surgeryDate: v.optional(v.string()),
     diagnosis: v.string(),
     serviceName: v.optional(v.string()),
+    /** Optimistic-lock counter for concurrent edit detection (see Phase 10.3). */
+    version: v.optional(v.number()),
   })
     .index("by_organization_id", ["organizationId"])
     .index("by_organization_bed_id", ["organizationId", "bedId"]),

@@ -4,6 +4,7 @@ import { Droppable } from "@hello-pangea/dnd"
 import { useTranslations } from "next-intl"
 
 import type { Doc } from "@/convex/_generated/dataModel"
+import type { ConventionRule } from "@/lib/clinic-settings"
 import { WardPatientCard } from "@/components/molecules/ward-patient-card"
 import {
   Card,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils"
 type PatientRecord = Doc<"patients">
 
 type WardPlacementLaneProps = {
+  conventionRules?: readonly ConventionRule[]
   draggingEnabled?: boolean
   droppableId: string
   getPatientName: (patient: PatientRecord) => string
@@ -25,6 +27,7 @@ type WardPlacementLaneProps = {
 }
 
 export function WardPlacementLane({
+  conventionRules,
   draggingEnabled = true,
   droppableId,
   getPatientName,
@@ -53,6 +56,7 @@ export function WardPlacementLane({
               {patients.length > 0 ? (
                 patients.map((patient, index) => (
                   <WardPatientCard
+                    conventionRules={conventionRules}
                     draggingEnabled={draggingEnabled}
                     key={patient._id}
                     fullName={getPatientName(patient)}

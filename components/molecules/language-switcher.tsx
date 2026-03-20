@@ -41,11 +41,14 @@ export function LanguageSwitcher({
       return
     }
 
-    const queryString = searchParams.toString()
-    const href = queryString ? `${pathname}?${queryString}` : pathname
-
     startTransition(() => {
-      router.replace(href, { locale: nextLocale })
+      router.replace(
+        {
+          pathname,
+          query: Object.fromEntries(searchParams.entries()),
+        },
+        { locale: nextLocale }
+      )
     })
   }
 

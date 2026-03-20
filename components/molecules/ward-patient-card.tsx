@@ -5,12 +5,15 @@ import { useTranslations } from "next-intl"
 
 import type { Doc } from "@/convex/_generated/dataModel"
 import { calculateClinicalDays } from "@/hooks/useClinicalDates"
+import type { ConventionRule } from "@/lib/clinic-settings"
+import { evaluatePatientRules } from "@/lib/rule-engine"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
 type PatientRecord = Doc<"patients">
 
 type WardPatientCardProps = {
+  conventionRules?: readonly ConventionRule[]
   draggingEnabled?: boolean
   fullName: string
   index: number
@@ -31,6 +34,7 @@ function getClinicalDayValues(patient: PatientRecord) {
 }
 
 export function WardPatientCard({
+  conventionRules,
   draggingEnabled = true,
   fullName,
   index,
@@ -40,6 +44,16 @@ export function WardPatientCard({
   const t = useTranslations("WardMap")
   const showsLocalName = fullName !== patient.initials
   const clinicalDays = getClinicalDayValues(patient)
+  const hasClinicalRequirements =
+    conventionRules &&
+    conventionRules.length > 0 &&
+    evaluatePatientRules(
+      {
+        diagnosis: patient.diagnosis,
+        surgeryDate: patient.surgeryDate ?? undefined,
+      },
+      conventionRules
+    ).length > 0
 
   return (
     <Draggable
@@ -79,8 +93,16 @@ export function WardPatientCard({
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
-              <p className="text-sm font-semibold tracking-tight">
-                {patient.initials}
+              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold tracking-tight">
+                <span>{patient.initials}</span>
+                {hasClinicalRequirements ? (
+                  <span
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-amber-500/50 bg-amber-100 text-xs text-amber-950 dark:bg-amber-950/50 dark:text-amber-50"
+                    title={t("clinicalRequirementsIndicator")}
+                  >
+                    ⚠️
+                  </span>
+                ) : null}
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {showsLocalName ? fullName : t("localNameUnavailable")}

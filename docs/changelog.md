@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- Phase 10.3 clinical rule evaluation: `lib/rule-engine.ts` evaluates tenant conventions against diagnosis and surgery date text, surfaces matched checklist items in the patient sheet (amber alert), and shows a ward-map card indicator when rules fire.
+- Patient record optimistic locking via optional `patients.version`, enforced in `upsertPatient` with a `CONFLICT:` error and a translated Sonner warning when versions diverge.
+- Shadcn `Alert` primitive for the clinical-requirements banner in the patient sheet.
 - Phase 10 i18n foundation with `next-intl`, locale-prefixed `en` and `tr` routes, message catalogs, and a dashboard language switcher.
 - Local patient-name persistence by `patientId`, allowing manual admission forms to keep full names browser-only while Convex stores only masked initials.
 - A 4-character `identifierCode` on patient records plus identity-keyed local roster matching so staged patients with shared initials can still resolve to the correct bedside name.

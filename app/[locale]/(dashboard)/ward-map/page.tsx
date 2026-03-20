@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { useAuth } from "@clerk/nextjs"
 import { useMutation, useQuery } from "convex/react"
@@ -26,6 +26,7 @@ import { useLocalRoster } from "@/hooks/useLocalRoster"
 import { usePLGLimits } from "@/hooks/usePLGLimits"
 import { useWardMapBoard } from "@/hooks/useWardMapBoard"
 import { formatPatientToastName } from "@/lib/patient-privacy"
+import { parseConventionRules } from "@/lib/clinic-settings"
 import {
   getWardMapBedDisplayLabel,
   resolveWardMapErrorMessage,
@@ -65,6 +66,11 @@ export default function WardMapPage() {
     patients,
     wardLayout: settings?.wardLayout ?? [],
   })
+
+  const conventionRules = useMemo(
+    () => parseConventionRules(settings?.conventions),
+    [settings?.conventions]
+  )
 
   const getPatientName = (patient: PatientRecord) =>
     getFullPatientName({
@@ -207,6 +213,7 @@ export default function WardMapPage() {
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <WardPlacementLane
+            conventionRules={conventionRules}
             draggingEnabled={!isLocked}
             droppableId={STAGING_DROPPABLE_ID}
             getPatientName={getPatientName}
@@ -217,6 +224,7 @@ export default function WardMapPage() {
           <section className="grid gap-4 xl:grid-cols-2">
             {rooms.map((room) => (
               <WardRoom
+                conventionRules={conventionRules}
                 draggingEnabled={!isLocked}
                 key={room.roomId}
                 getPatientName={getPatientName}

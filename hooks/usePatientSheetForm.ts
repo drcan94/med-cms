@@ -42,6 +42,10 @@ function resolvePatientSheetErrorMessage(
     return t("toasts.saveError")
   }
 
+  if (error.message.startsWith("CONFLICT:")) {
+    return t("toasts.conflict")
+  }
+
   switch (error.message) {
     case "TRIAL_LIMIT_REACHED":
       return t("toasts.trialLimitReached")
@@ -158,6 +162,7 @@ export function usePatientSheetForm({
         admissionDate: toClinicalIsoDate(admissionDate),
         surgeryDate: surgeryDate ? toClinicalIsoDate(surgeryDate) : undefined,
         serviceName: serviceName || undefined,
+        version: isEditing ? (patient?.version ?? 0) : undefined,
       })
 
       if (fullName) {
@@ -171,6 +176,11 @@ export function usePatientSheetForm({
       toast.success(t(isEditing ? "toasts.updated" : "toasts.created"))
       onOpenChange(false)
     } catch (error) {
+      if (error instanceof Error && error.message.startsWith("CONFLICT:")) {
+        toast.warning(resolvePatientSheetErrorMessage(error, t))
+        return
+      }
+
       toast.error(resolvePatientSheetErrorMessage(error, t))
     } finally {
       setIsSaving(false)

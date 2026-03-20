@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import { useMutation, useQuery } from "convex/react"
-import { Plus, Save } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
@@ -27,6 +27,21 @@ import {
   type ConventionsFormValues,
 } from "@/lib/clinic-settings"
 
+type AutoSaveState = "idle" | "saving" | "saved" | "error" | "invalid"
+type SaveResult = {
+  organizationId: string
+  snapshot: string
+  type: "error" | "saved"
+}
+
+function getRulesSnapshot(rules: ConventionsFormValues["rules"] | undefined) {
+  const normalizedRules = serializeConventionRules(rules ?? [])
+  return {
+    normalizedRules,
+    snapshot: JSON.stringify(normalizedRules),
+  }
+}
+
 export default function ConventionsPage() {
   const t = useTranslations("ConventionsPage")
   const { isLoaded, orgId } = useAuth()
@@ -37,8 +52,7 @@ export default function ConventionsPage() {
   const upsertClinicSettings = useMutation(api.clinicSettings.upsertClinicSettings)
   const {
     control,
-    formState: { errors, isSubmitting },
-    handleSubmit,
+    formState: { errors, isDirty, isValid },
     register,
     reset,
     setValue,
@@ -46,6 +60,7 @@ export default function ConventionsPage() {
     defaultValues: {
       rules: [],
     },
+    mode: "onChange",
   })
   const { append, fields, remove } = useFieldArray({
     control,
@@ -56,16 +71,80 @@ export default function ConventionsPage() {
     control,
     name: "rules",
   })
+  const { normalizedRules: currentRules, snapshot: currentRulesSnapshot } = useMemo(
+    () => getRulesSnapshot(watchedRules),
+    [watchedRules]
+  )
+  const latestRulesSnapshotRef = useRef("[]")
+  const [saveResult, setSaveResult] = useState<SaveResult | null>(null)
 
   useEffect(() => {
     if (!settings) {
       return
     }
 
+    const { normalizedRules } = getRulesSnapshot(parseConventionRules(settings.conventions))
     reset({
-      rules: parseConventionRules(settings.conventions),
+      rules: normalizedRules,
     })
   }, [reset, settings])
+
+  useEffect(() => {
+    latestRulesSnapshotRef.current = currentRulesSnapshot
+  }, [currentRulesSnapshot])
+
+  useEffect(() => {
+    if (!orgId || settings === undefined || !isDirty || !isValid) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        try {
+          await upsertClinicSettings({
+            conventions: currentRules,
+            organizationId: orgId,
+            wardLayout: settings.wardLayout,
+          })
+
+          if (latestRulesSnapshotRef.current !== currentRulesSnapshot) {
+            return
+          }
+
+          reset({ rules: currentRules })
+          setSaveResult({
+            organizationId: orgId,
+            snapshot: currentRulesSnapshot,
+            type: "saved",
+          })
+        } catch (error) {
+          if (latestRulesSnapshotRef.current === currentRulesSnapshot) {
+            setSaveResult({
+              organizationId: orgId,
+              snapshot: currentRulesSnapshot,
+              type: "error",
+            })
+          }
+
+          toast.error(
+            error instanceof Error ? error.message : t("toasts.saveError")
+          )
+        }
+      })()
+    }, 600)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    currentRules,
+    currentRulesSnapshot,
+    isDirty,
+    isValid,
+    orgId,
+    reset,
+    settings,
+    t,
+    upsertClinicSettings,
+  ])
 
   const handleAddRule = (): void => {
     append(createEmptyConventionRule())
@@ -80,35 +159,39 @@ export default function ConventionsPage() {
       shouldValidate: true,
     })
   }
-
-  const onSubmit = async (values: ConventionsFormValues): Promise<void> => {
-    if (!orgId) {
-      toast.error(t("toasts.selectOrganization"))
-      return
-    }
-
-    if (!settings) {
-      toast.error(t("toasts.loading"))
-      return
-    }
-
-    const rules = serializeConventionRules(values.rules)
-
-    try {
-      await upsertClinicSettings({
-        conventions: rules,
-        organizationId: orgId,
-        wardLayout: settings.wardLayout,
-      })
-
-      reset({ rules })
-      toast.success(t("toasts.saved"))
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("toasts.saveError")
-      )
-    }
-  }
+  const currentSaveResultType =
+    saveResult?.organizationId === orgId &&
+    saveResult?.snapshot === currentRulesSnapshot
+      ? saveResult.type
+      : null
+  const autoSaveState: AutoSaveState =
+    settings === undefined
+      ? "idle"
+      : isDirty && !isValid
+        ? "invalid"
+        : currentSaveResultType === "error"
+          ? "error"
+          : isDirty
+            ? "saving"
+            : currentSaveResultType === "saved"
+              ? "saved"
+              : "idle"
+  const autoSaveStatusLabel =
+    settings === undefined
+      ? t("status.loadingRules")
+      : autoSaveState === "saving"
+        ? t("actions.saving")
+        : autoSaveState === "saved"
+          ? t("toasts.saved")
+          : autoSaveState === "invalid"
+            ? t("status.invalid")
+            : autoSaveState === "error"
+              ? t("toasts.saveError")
+              : t("status.autoSave")
+  const autoSaveStatusClassName =
+    autoSaveState === "error" || autoSaveState === "invalid"
+      ? "text-sm leading-6 text-destructive"
+      : "text-sm leading-6 text-muted-foreground"
 
   if (!isLoaded) {
     return (
@@ -133,7 +216,12 @@ export default function ConventionsPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6">
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+      }}
+      className="grid gap-6"
+    >
       <Card>
         <CardHeader className="border-b">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -150,15 +238,12 @@ export default function ConventionsPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col items-start gap-2 lg:items-end">
               <Button type="button" variant="outline" onClick={handleAddRule}>
                 <Plus className="size-4" />
                 {t("actions.addRule")}
               </Button>
-              <Button type="submit" disabled={isSubmitting || settings === undefined}>
-                <Save className="size-4" />
-                {isSubmitting ? t("actions.saving") : t("actions.save")}
-              </Button>
+              <p className={autoSaveStatusClassName}>{autoSaveStatusLabel}</p>
             </div>
           </div>
         </CardHeader>

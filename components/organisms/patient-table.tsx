@@ -1,6 +1,6 @@
 "use client"
 
-import type { KeyboardEvent } from "react"
+import { useMemo, type KeyboardEvent } from "react"
 import { useQuery } from "convex/react"
 import { useTranslations } from "next-intl"
 
@@ -9,6 +9,8 @@ import type { Doc } from "@/convex/_generated/dataModel"
 import { calculateClinicalDays } from "@/hooks/useClinicalDates"
 import { useLocalRoster } from "@/hooks/useLocalRoster"
 import { STAGING_BED_ID } from "@/lib/patient-privacy"
+import { buildWardBedMetadata } from "@/lib/ward-layout"
+import { getWardMapBedDisplayLabel } from "@/lib/ward-map-display"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -90,11 +92,20 @@ export function PatientTable({
   organizationId,
 }: Readonly<PatientTableProps>) {
   const t = useTranslations("PatientTable")
+  const wardMapT = useTranslations("WardMap")
   const { getFullPatientName } = useLocalRoster()
+  const clinicSettings = useQuery(
+    api.clinicSettings.getClinicSettings,
+    organizationId ? { organizationId } : "skip"
+  )
   const patients = useQuery(
     api.patients.getPatientsByOrganization,
     organizationId ? { organizationId } : "skip"
   ) as PatientRecord[] | undefined
+  const bedMetadata = useMemo(
+    () => buildWardBedMetadata(clinicSettings?.wardLayout ?? []),
+    [clinicSettings?.wardLayout]
+  )
 
   if (!organizationId) {
     return (
@@ -144,6 +155,10 @@ export function PatientTable({
             patientId: patient._id,
           })
           const showsLocalRosterName = fullPatientName !== patient.initials
+          const bedDisplayLabel =
+            patient.bedId === STAGING_BED_ID
+              ? t("staging")
+              : getWardMapBedDisplayLabel(patient.bedId, bedMetadata, wardMapT)
 
           return (
             <TableRow
@@ -155,7 +170,7 @@ export function PatientTable({
               className={interactive ? "cursor-pointer" : undefined}
             >
               <TableCell className="font-medium">
-                {patient.bedId === STAGING_BED_ID ? t("staging") : patient.bedId}
+                {bedDisplayLabel}
               </TableCell>
               <TableCell className="whitespace-normal">
                 <div className="flex flex-col gap-1">

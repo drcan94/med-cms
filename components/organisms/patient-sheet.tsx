@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { useQuery } from "convex/react"
 import { useLocale, useTranslations } from "next-intl"
 
@@ -9,6 +10,7 @@ import { usePatientSheetForm } from "@/hooks/usePatientSheetForm"
 import type { AppLocale } from "@/i18n/routing"
 import { buildPatientBedOptions } from "@/lib/patient-bed-options"
 import { STAGING_BED_ID, generatePatientInitials } from "@/lib/patient-privacy"
+import { buildWardBedMetadata } from "@/lib/ward-layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -73,9 +75,22 @@ function PatientSheetForm({
     formState.fullName.trim().length > 0
       ? generatePatientInitials(formState.fullName, locale)
       : patient?.initials ?? ""
+  const bedMetadata = useMemo(
+    () => buildWardBedMetadata(clinicSettings?.wardLayout ?? []),
+    [clinicSettings?.wardLayout]
+  )
   const bedOptions = buildPatientBedOptions({
     currentPatient: patient,
-    currentBedLabel: (bedId) => t("fields.bedId.options.currentBed", { bedId }),
+    currentBedLabel: (bedId) => {
+      const bed = bedMetadata.get(bedId)
+
+      if (!bed) {
+        return t("fields.bedId.options.currentBed")
+      }
+
+      const bedLabel = t("fields.bedId.options.bedLabel", { number: bed.bedNumber })
+      return bed.roomName.trim() ? `${bed.roomName} - ${bedLabel}` : bedLabel
+    },
     formatBedLabel: (roomName, bedNumber) => {
       const bedLabel = t("fields.bedId.options.bedLabel", { number: bedNumber })
       return roomName.trim() ? `${roomName} - ${bedLabel}` : bedLabel

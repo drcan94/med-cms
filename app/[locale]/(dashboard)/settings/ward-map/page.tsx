@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import { useMutation, useQuery } from "convex/react"
-import { Plus, Save } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
@@ -27,6 +27,22 @@ import {
 
 import { WardLayoutRoomCard } from "./_components/ward-layout-room-card"
 
+type AutoSaveState = "idle" | "saving" | "saved" | "error" | "invalid"
+type SaveResult = {
+  organizationId: string
+  snapshot: string
+  type: "error" | "saved"
+}
+
+function getWardLayoutSnapshot(rooms: WardLayoutFormValues["rooms"] | undefined) {
+  const wardLayout = serializeWardLayout(rooms ?? [])
+  return {
+    formValues: toWardLayoutFormValues(wardLayout),
+    snapshot: JSON.stringify(wardLayout),
+    wardLayout,
+  }
+}
+
 export default function WardMapSettingsPage() {
   const t = useTranslations("WardMapSettingsPage")
   const { isLoaded, orgId } = useAuth()
@@ -37,14 +53,14 @@ export default function WardMapSettingsPage() {
   const upsertClinicSettings = useMutation(api.clinicSettings.upsertClinicSettings)
   const {
     control,
-    formState: { errors, isSubmitting },
-    handleSubmit,
+    formState: { errors, isDirty, isValid },
     register,
     reset,
   } = useForm<WardLayoutFormValues>({
     defaultValues: {
       rooms: [],
     },
+    mode: "onChange",
   })
   const { append, fields, remove } = useFieldArray({
     control,
@@ -55,47 +71,117 @@ export default function WardMapSettingsPage() {
     control,
     name: "rooms",
   })
+  const {
+    formValues: currentFormValues,
+    snapshot: currentWardLayoutSnapshot,
+    wardLayout: currentWardLayout,
+  } = useMemo(() => getWardLayoutSnapshot(watchedRooms), [watchedRooms])
+  const latestWardLayoutSnapshotRef = useRef("[]")
+  const [saveResult, setSaveResult] = useState<SaveResult | null>(null)
 
   useEffect(() => {
     if (!settings) {
       return
     }
 
-    reset(toWardLayoutFormValues(settings.wardLayout))
+    const initialFormValues = toWardLayoutFormValues(settings.wardLayout)
+    reset(initialFormValues)
   }, [reset, settings])
+
+  useEffect(() => {
+    latestWardLayoutSnapshotRef.current = currentWardLayoutSnapshot
+  }, [currentWardLayoutSnapshot])
+
+  useEffect(() => {
+    if (!orgId || settings === undefined || !isDirty || !isValid) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        try {
+          await upsertClinicSettings({
+            conventions: settings.conventions,
+            organizationId: orgId,
+            wardLayout: currentWardLayout,
+          })
+
+          if (latestWardLayoutSnapshotRef.current !== currentWardLayoutSnapshot) {
+            return
+          }
+
+          reset(currentFormValues)
+          setSaveResult({
+            organizationId: orgId,
+            snapshot: currentWardLayoutSnapshot,
+            type: "saved",
+          })
+        } catch (error) {
+          if (latestWardLayoutSnapshotRef.current === currentWardLayoutSnapshot) {
+            setSaveResult({
+              organizationId: orgId,
+              snapshot: currentWardLayoutSnapshot,
+              type: "error",
+            })
+          }
+
+          toast.error(error instanceof Error ? error.message : t("toasts.saveError"))
+        }
+      })()
+    }, 600)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    currentFormValues,
+    currentWardLayout,
+    currentWardLayoutSnapshot,
+    isDirty,
+    isValid,
+    orgId,
+    reset,
+    settings,
+    t,
+    upsertClinicSettings,
+  ])
 
   const totalBeds =
     watchedRooms?.reduce((sum, room) => {
       const capacity = Number.isFinite(room?.capacity) ? room.capacity : 0
       return sum + Math.max(0, Math.trunc(capacity))
     }, 0) ?? 0
-
-  const onSubmit = async (values: WardLayoutFormValues): Promise<void> => {
-    if (!orgId) {
-      toast.error(t("toasts.selectOrganization"))
-      return
-    }
-
-    if (!settings) {
-      toast.error(t("toasts.loading"))
-      return
-    }
-
-    const wardLayout = serializeWardLayout(values.rooms)
-
-    try {
-      await upsertClinicSettings({
-        conventions: settings.conventions,
-        organizationId: orgId,
-        wardLayout,
-      })
-
-      reset(toWardLayoutFormValues(wardLayout))
-      toast.success(t("toasts.saved"))
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("toasts.saveError"))
-    }
-  }
+  const currentSaveResultType =
+    saveResult?.organizationId === orgId &&
+    saveResult?.snapshot === currentWardLayoutSnapshot
+      ? saveResult.type
+      : null
+  const autoSaveState: AutoSaveState =
+    settings === undefined
+      ? "idle"
+      : isDirty && !isValid
+        ? "invalid"
+        : currentSaveResultType === "error"
+          ? "error"
+          : isDirty
+            ? "saving"
+            : currentSaveResultType === "saved"
+              ? "saved"
+              : "idle"
+  const autoSaveStatusLabel =
+    settings === undefined
+      ? t("state.loading")
+      : autoSaveState === "saving"
+        ? t("actions.saving")
+        : autoSaveState === "saved"
+          ? t("toasts.saved")
+          : autoSaveState === "invalid"
+            ? t("status.invalid")
+            : autoSaveState === "error"
+              ? t("toasts.saveError")
+              : t("status.autoSave")
+  const autoSaveStatusClassName =
+    autoSaveState === "error" || autoSaveState === "invalid"
+      ? "text-sm leading-6 text-destructive"
+      : "text-sm leading-6 text-muted-foreground"
 
   if (!isLoaded) {
     return (
@@ -120,7 +206,12 @@ export default function WardMapSettingsPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6">
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+      }}
+      className="grid gap-6"
+    >
       <Card>
         <CardHeader className="border-b">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -137,7 +228,7 @@ export default function WardMapSettingsPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col items-start gap-2 lg:items-end">
               <Button
                 type="button"
                 variant="outline"
@@ -146,10 +237,7 @@ export default function WardMapSettingsPage() {
                 <Plus className="size-4" />
                 {t("actions.addRoom")}
               </Button>
-              <Button type="submit" disabled={isSubmitting || settings === undefined}>
-                <Save className="size-4" />
-                {isSubmitting ? t("actions.saving") : t("actions.save")}
-              </Button>
+              <p className={autoSaveStatusClassName}>{autoSaveStatusLabel}</p>
             </div>
           </div>
         </CardHeader>

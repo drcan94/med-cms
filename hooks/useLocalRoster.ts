@@ -28,6 +28,8 @@ const EMPTY_ROSTER_STORE: LocalRosterStore = {
   bedRoster: EMPTY_ROSTER,
   patientRoster: EMPTY_ROSTER,
 }
+let cachedSerializedRoster: string | null = null
+let cachedRosterStore: LocalRosterStore = EMPTY_ROSTER_STORE
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -92,6 +94,15 @@ function sanitizeRosterStore(data: Partial<LocalRosterStore>): LocalRosterStore 
   }
 }
 
+function cacheRosterStore(
+  serializedRoster: string | null,
+  rosterStore: LocalRosterStore
+): LocalRosterStore {
+  cachedSerializedRoster = serializedRoster
+  cachedRosterStore = rosterStore
+  return rosterStore
+}
+
 function readRosterFromStorage(): LocalRosterStore {
   if (typeof window === "undefined") {
     return EMPTY_ROSTER_STORE
@@ -99,22 +110,29 @@ function readRosterFromStorage(): LocalRosterStore {
 
   const storedRoster = window.localStorage.getItem(LOCAL_ROSTER_STORAGE_KEY)
 
+  if (storedRoster === cachedSerializedRoster) {
+    return cachedRosterStore
+  }
+
   if (!storedRoster) {
-    return EMPTY_ROSTER_STORE
+    return cacheRosterStore(null, EMPTY_ROSTER_STORE)
   }
 
   try {
     const parsedRoster = JSON.parse(storedRoster) as unknown
 
     if (!isRecord(parsedRoster)) {
-      return EMPTY_ROSTER_STORE
+      return cacheRosterStore(storedRoster, EMPTY_ROSTER_STORE)
     }
 
     if ("bedRoster" in parsedRoster || "patientRoster" in parsedRoster) {
-      return sanitizeRosterStore(parsedRoster as Partial<LocalRosterStore>)
+      return cacheRosterStore(
+        storedRoster,
+        sanitizeRosterStore(parsedRoster as Partial<LocalRosterStore>)
+      )
     }
 
-    return {
+    return cacheRosterStore(storedRoster, {
       bedRoster: sanitizeRoster(
         Object.entries(parsedRoster).reduce<LocalRoster>((nextRoster, [key, value]) => {
           if (typeof value === "string") {
@@ -125,9 +143,9 @@ function readRosterFromStorage(): LocalRosterStore {
         }, {})
       ),
       patientRoster: EMPTY_ROSTER,
-    }
+    })
   } catch {
-    return EMPTY_ROSTER_STORE
+    return cacheRosterStore(storedRoster, EMPTY_ROSTER_STORE)
   }
 }
 
@@ -168,12 +186,16 @@ export function useLocalRoster() {
     const nextRoster = sanitizeRoster(data)
 
     if (typeof window !== "undefined") {
+      const nextRosterStore = {
+        bedRoster: nextRoster,
+        patientRoster: rosterStore.patientRoster,
+      } satisfies LocalRosterStore
+      const serializedRoster = JSON.stringify(nextRosterStore)
+
+      cacheRosterStore(serializedRoster, nextRosterStore)
       window.localStorage.setItem(
         LOCAL_ROSTER_STORAGE_KEY,
-        JSON.stringify({
-          bedRoster: nextRoster,
-          patientRoster: rosterStore.patientRoster,
-        } satisfies LocalRosterStore)
+        serializedRoster
       )
       emitRosterChange()
     }
@@ -188,15 +210,19 @@ export function useLocalRoster() {
         return
       }
 
+      const nextRosterStore = {
+        bedRoster: rosterStore.bedRoster,
+        patientRoster: {
+          ...rosterStore.patientRoster,
+          [normalizeRosterKey(identityKey)]: normalizedFullName,
+        },
+      } satisfies LocalRosterStore
+      const serializedRoster = JSON.stringify(nextRosterStore)
+
+      cacheRosterStore(serializedRoster, nextRosterStore)
       window.localStorage.setItem(
         LOCAL_ROSTER_STORAGE_KEY,
-        JSON.stringify({
-          bedRoster: rosterStore.bedRoster,
-          patientRoster: {
-            ...rosterStore.patientRoster,
-            [normalizeRosterKey(identityKey)]: normalizedFullName,
-          },
-        } satisfies LocalRosterStore)
+        serializedRoster
       )
       emitRosterChange()
     },
@@ -205,6 +231,7 @@ export function useLocalRoster() {
 
   const clearRoster = useCallback(() => {
     if (typeof window !== "undefined") {
+      cacheRosterStore(null, EMPTY_ROSTER_STORE)
       window.localStorage.removeItem(LOCAL_ROSTER_STORAGE_KEY)
       emitRosterChange()
     }

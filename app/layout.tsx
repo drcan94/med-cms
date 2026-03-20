@@ -60,7 +60,7 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <NextIntlClientProvider messages={messages}>
+            <NextIntlClientProvider locale={locale} messages={messages}>
               <ConvexClientProvider>{children}</ConvexClientProvider>
             </NextIntlClientProvider>
             <Toaster closeButton position="top-right" richColors />

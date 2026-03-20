@@ -10,7 +10,6 @@ import { usePatientSheetBedOptions } from "@/hooks/usePatientSheetBedOptions"
 import { usePatientSheetForm } from "@/hooks/usePatientSheetForm"
 import type { AppLocale } from "@/i18n/routing"
 import { parseConventionRules } from "@/lib/clinic-settings"
-import { toClinicalIsoDate } from "@/lib/patient-form"
 import { STAGING_BED_ID, generatePatientInitials } from "@/lib/patient-privacy"
 import { evaluatePatientRules } from "@/lib/rule-engine"
 import { PatientClinicalRequirementsAlert } from "@/components/molecules/patient-clinical-requirements-alert"
@@ -81,13 +80,11 @@ export function PatientSheetForm({
       evaluatePatientRules(
         {
           diagnosis: formState.diagnosis,
-          surgeryDate: formState.surgeryDate.trim()
-            ? toClinicalIsoDate(formState.surgeryDate.trim())
-            : undefined,
+          procedureName: formState.procedureName.trim() || undefined,
         },
         conventionRules
       ),
-    [conventionRules, formState.diagnosis, formState.surgeryDate]
+    [conventionRules, formState.diagnosis, formState.procedureName]
   )
   const initialsPreview =
     formState.fullName.trim().length > 0
@@ -214,6 +211,18 @@ export function PatientSheetForm({
               type="date"
               value={formState.surgeryDate}
               onChange={handleFieldChange("surgeryDate")}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="procedureName">{t("fields.procedureName.label")}</Label>
+            <Input
+              id="procedureName"
+              value={formState.procedureName}
+              onChange={handleFieldChange("procedureName")}
+              placeholder={t("fields.procedureName.placeholder")}
             />
           </div>
         </div>

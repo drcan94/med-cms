@@ -12,6 +12,7 @@ export type WritablePatientFields = Pick<
   | "diagnosis"
   | "admissionDate"
   | "surgeryDate"
+  | "procedureName"
   | "serviceName"
 >
 
@@ -23,6 +24,7 @@ type SanitizePatientFieldsArgs = {
   diagnosis: string
   admissionDate: string
   surgeryDate?: string
+  procedureName?: string
   serviceName?: string
 }
 
@@ -40,6 +42,7 @@ export function sanitizePatientFields(
   args: SanitizePatientFieldsArgs
 ): WritablePatientFields {
   const surgeryDate = args.surgeryDate?.trim()
+  const procedureName = args.procedureName?.trim()
   const serviceName = args.serviceName?.trim()
 
   return {
@@ -53,6 +56,7 @@ export function sanitizePatientFields(
     diagnosis: requireText(args.diagnosis, "Diagnosis"),
     admissionDate: requireText(args.admissionDate, "Admission date"),
     surgeryDate: surgeryDate || undefined,
+    procedureName: procedureName || undefined,
     serviceName: serviceName || undefined,
   }
 }

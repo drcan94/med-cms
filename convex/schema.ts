@@ -31,6 +31,7 @@ export default defineSchema({
     bedId: v.string(),
     admissionDate: v.string(),
     surgeryDate: v.optional(v.string()),
+    procedureName: v.optional(v.string()),
     diagnosis: v.string(),
     serviceName: v.optional(v.string()),
     /** Optimistic-lock counter for concurrent edit detection (see Phase 10.3). */

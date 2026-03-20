@@ -125,6 +125,7 @@ export function usePatientSheetForm({
     const diagnosis = formState.diagnosis.trim()
     const admissionDate = formState.admissionDate.trim()
     const surgeryDate = formState.surgeryDate.trim()
+    const procedureName = formState.procedureName.trim()
     const serviceName = formState.serviceName.trim()
     const identifierCode = normalizeIdentifierCode(formState.identifierCode)
     const initials =
@@ -161,6 +162,7 @@ export function usePatientSheetForm({
         diagnosis,
         admissionDate: toClinicalIsoDate(admissionDate),
         surgeryDate: surgeryDate ? toClinicalIsoDate(surgeryDate) : undefined,
+        procedureName: procedureName || undefined,
         serviceName: serviceName || undefined,
         version: isEditing ? (patient?.version ?? 0) : undefined,
       })

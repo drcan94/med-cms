@@ -50,7 +50,7 @@ export function WardPatientCard({
     evaluatePatientRules(
       {
         diagnosis: patient.diagnosis,
-        surgeryDate: patient.surgeryDate ?? undefined,
+        procedureName: patient.procedureName ?? undefined,
       },
       conventionRules
     ).length > 0

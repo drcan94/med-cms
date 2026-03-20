@@ -58,6 +58,7 @@ export const upsertPatient = mutation({
     diagnosis: v.string(),
     admissionDate: v.string(),
     surgeryDate: v.optional(v.string()),
+    procedureName: v.optional(v.string()),
     serviceName: v.optional(v.string()),
     version: v.optional(v.number()),
   },

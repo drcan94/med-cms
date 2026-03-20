@@ -12,6 +12,7 @@ export type PatientFormState = {
   fullName: string
   identifierCode: string
   initials: string
+  procedureName: string
   serviceName: string
   surgeryDate: string
 }
@@ -41,6 +42,7 @@ export function getInitialPatientFormState(
     fullName,
     identifierCode: patient?.identifierCode ?? "",
     initials: patient?.initials ?? "",
+    procedureName: patient?.procedureName ?? "",
     serviceName: patient?.serviceName ?? "",
     surgeryDate: formatDateForInput(patient?.surgeryDate),
   }

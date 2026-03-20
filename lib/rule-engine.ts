@@ -2,11 +2,12 @@ import type { ConventionRule } from "@/lib/clinic-settings"
 
 /**
  * Subset of persisted patient fields used for convention matching.
- * Surgery rules use the stored ISO `surgeryDate` string (procedure keywords belong in diagnosis until a dedicated surgery-notes field exists).
+ * Surgery rules match against the dedicated `procedureName` text field,
+ * NOT the ISO date string in `surgeryDate`.
  */
 export type RuleEvaluationPatient = {
   diagnosis: string
-  surgeryDate?: string | null
+  procedureName?: string | null
 }
 
 function fieldHaystack(
@@ -17,7 +18,7 @@ function fieldHaystack(
     return patient.diagnosis ?? ""
   }
 
-  return patient.surgeryDate ?? ""
+  return patient.procedureName ?? ""
 }
 
 function containsIgnoreCase(haystack: string, needle: string): boolean {

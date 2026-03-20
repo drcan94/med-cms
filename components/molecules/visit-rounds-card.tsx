@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 
 import { formatCompactBedDisplay } from "@/lib/ward-layout"
+import { LocalRosterInfo } from "@/components/molecules/local-roster-info"
 import { Badge } from "@/components/ui/badge"
 import { STAGING_BED_ID } from "@/lib/patient-privacy"
 import type { VisitSheetEntry } from "@/lib/visit-sheet"
@@ -36,12 +37,22 @@ export function VisitRoundsCard({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               {t("patient")}
             </p>
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              {entry.initials}
-            </h2>
-            <p className="text-base font-medium text-foreground sm:text-lg">
-              {showsLocalRosterName ? entry.fullName : t("localRosterNotSynced")}
-            </p>
+            <div className="flex items-start gap-2">
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                {entry.initials}
+              </h2>
+              {!showsLocalRosterName ? (
+                <LocalRosterInfo
+                  className="mt-1"
+                  message={t("localRosterNotSynced")}
+                />
+              ) : null}
+            </div>
+            {showsLocalRosterName ? (
+              <p className="text-base font-medium text-foreground sm:text-lg">
+                {entry.fullName}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">

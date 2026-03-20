@@ -57,18 +57,18 @@ export function LanguageSwitcher({
       disabled={isPending}
       onClick={handleLocaleChange}
       className={cn(
-        "h-8 rounded-full border border-border/70 bg-background/70 px-2 text-xs font-semibold uppercase shadow-sm transition-colors hover:bg-muted/60 sm:h-9 sm:px-2.5",
+        "h-8 rounded-xl border border-border/70 bg-background/70 px-2 text-xs font-semibold uppercase shadow-sm transition-colors hover:bg-muted/60 sm:h-9 sm:px-2.5",
         className
       )}
       aria-busy={isPending}
       aria-label={`${t("label")}: ${t(locale)}. ${t(nextLocale)}`}
     >
       {isPending ? (
-        <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+        <Loader2Icon className="hidden size-4 animate-spin text-muted-foreground sm:block" />
       ) : (
-        <Globe className="size-4 text-muted-foreground" />
+        <Globe className="hidden size-4 text-muted-foreground sm:block" />
       )}
-      <span>{LOCALE_SHORT_LABELS[locale]}</span>
+      <span className="min-w-[2ch] text-center">{LOCALE_SHORT_LABELS[locale]}</span>
     </Button>
   )
 }

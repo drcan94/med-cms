@@ -1,0 +1,15 @@
+---
+description: Preferred git commit, push, and Convex deploy workflow
+alwaysApply: true
+---
+
+# Git And Deploy Workflow
+
+- Treat commit, push, and `npx convex deploy --yes` as explicit release actions.
+- Only run them when the user clearly asks to commit, push, ship, release, or deploy in the current turn.
+- Before any commit, inspect `git status`, `git diff`, and recent `git log`.
+- Stage only the relevant files for the requested change. Do not blindly use `git add .` when unrelated files or secrets may be present.
+- Write a concise commit message that explains the purpose of the change.
+- Push safely with the current branch by default. Use `git push -u origin HEAD` unless the user explicitly requests a specific branch like `main`.
+- Run `npx convex deploy --yes` only when the user explicitly asks for deployment after the code changes are ready.
+- If the user insists on the exact `git add .` and `git push -u origin main` flow, first verify that the worktree only contains intended changes and briefly warn about the risk of pushing unrelated work to `main`.

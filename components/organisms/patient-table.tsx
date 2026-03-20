@@ -11,6 +11,7 @@ import { useLocalRoster } from "@/hooks/useLocalRoster"
 import { STAGING_BED_ID } from "@/lib/patient-privacy"
 import { buildWardBedMetadata } from "@/lib/ward-layout"
 import { getWardMapBedDisplayLabel } from "@/lib/ward-map-display"
+import { LocalRosterInfo } from "@/components/molecules/local-roster-info"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -173,17 +174,23 @@ export function PatientTable({
                 {bedDisplayLabel}
               </TableCell>
               <TableCell className="whitespace-normal">
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium">{fullPatientName}</span>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-start gap-1">
+                    <span className="min-w-0 flex-1 font-medium leading-5">
+                      {fullPatientName}
+                    </span>
+                    {!showsLocalRosterName ? (
+                      <LocalRosterInfo
+                        className="-mr-1 -mt-0.5"
+                        message={t("localRosterNotSynced")}
+                      />
+                    ) : null}
+                  </div>
                   {showsLocalRosterName ? (
                     <span className="text-xs text-muted-foreground">
                       {t("dbInitials", { initials: patient.initials })}
                     </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      {t("localRosterNotSynced")}
-                    </span>
-                  )}
+                  ) : null}
                 </div>
               </TableCell>
               <TableCell className="max-w-sm whitespace-normal text-muted-foreground">

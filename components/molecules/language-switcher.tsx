@@ -2,10 +2,10 @@
 
 import { Globe } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
-import { Link, usePathname } from "@/i18n/navigation"
+import { stripLocalePrefix } from "@/lib/auth-paths"
 import type { AppLocale } from "@/i18n/routing"
 import { routing } from "@/i18n/routing"
 import { cn } from "@/lib/utils"
@@ -24,9 +24,12 @@ function getNextLocale(locale: AppLocale): AppLocale {
   return routing.locales[(localeIndex + 1) % routing.locales.length] as AppLocale
 }
 
-function buildLocalizedUrl(pathname: string, locale: AppLocale, searchParams: URLSearchParams): string {
+function buildLocalizedUrl(rawPathname: string, targetLocale: AppLocale, searchParams: URLSearchParams): string {
+  const cleanPathname = stripLocalePrefix(rawPathname)
+  const localizedPath = cleanPathname === "/"
+    ? `/${targetLocale}`
+    : `/${targetLocale}${cleanPathname}`
   const queryString = searchParams.toString()
-  const localizedPath = `/${locale}${pathname === "/" ? "" : pathname}`
   return queryString ? `${localizedPath}?${queryString}` : localizedPath
 }
 
@@ -35,10 +38,10 @@ export function LanguageSwitcher({
 }: Readonly<LanguageSwitcherProps>) {
   const t = useTranslations("LanguageSwitcher")
   const locale = useLocale() as AppLocale
-  const pathname = usePathname()
+  const rawPathname = usePathname()
   const searchParams = useSearchParams()
   const nextLocale = getNextLocale(locale)
-  const nextUrl = buildLocalizedUrl(pathname, nextLocale, searchParams)
+  const nextUrl = buildLocalizedUrl(rawPathname, nextLocale, searchParams)
 
   return (
     <Button
@@ -52,10 +55,10 @@ export function LanguageSwitcher({
       )}
       aria-label={`${t("label")}: ${t(locale)}. ${t(nextLocale)}`}
     >
-      <Link href={nextUrl}>
+      <a href={nextUrl}>
         <Globe className="hidden size-4 text-muted-foreground sm:block" />
         <span className="min-w-[2ch] text-center">{LOCALE_SHORT_LABELS[locale]}</span>
-      </Link>
+      </a>
     </Button>
   )
 }

@@ -11,7 +11,9 @@
   "dependencies": {
     "@clerk/nextjs": "^7.0.4",
     "@hello-pangea/dnd": "^18.0.1",
+    "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-tooltip": "^1.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -27,7 +29,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-dropzone": "^15.0.0",
-    "react-hook-form": "^7.71.2",
+    "react-hook-form": "^7.72.0",
     "shadcn": "^4.0.8",
     "sonner": "^2.0.7",
     "svix": "^1.88.0",

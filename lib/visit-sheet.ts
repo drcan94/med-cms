@@ -17,6 +17,39 @@ type BuildVisitSheetEntriesArgs = {
   wardLayout: WardRoom[]
 }
 
+export type ThoracicInterventionSummary = {
+  id: string
+  type: "chest_tube" | "drain"
+  side: "right" | "left" | "bilateral"
+  size: string
+  dayCount: number
+  latestDrainage?: number
+  isActive: boolean
+}
+
+export type AntibioticSummary = {
+  id: string
+  name: string
+  dayCount: number
+  isActive: boolean
+}
+
+export type LabCultureSummary = {
+  id: string
+  type: string
+  status: "ordered" | "resulted" | "printed"
+}
+
+export type VitalsSummary = {
+  temperature: number
+  bloodPressure: string
+  pulse: number
+  spO2: number
+  isHypoxic: boolean
+  isFebrile: boolean
+  isTachycardic: boolean
+}
+
 export type VisitSheetEntry = {
   bedDisplay: string
   bedId: string
@@ -28,6 +61,14 @@ export type VisitSheetEntry = {
   initials: string
   roomBedCount?: number
   roomName?: string
+  procedureName?: string
+  vitals?: VitalsSummary
+  interventions: ThoracicInterventionSummary[]
+  antibiotics: AntibioticSummary[]
+  pendingCultures: LabCultureSummary[]
+  completedRequirements?: { item: string; completedAt: string }[]
+  customTodos?: { id: string; text: string; completed: boolean; createdAt: string; completedAt?: string }[]
+  identifierCode: string
 }
 
 function compareBedIds(leftBedId: string, rightBedId: string): number {
@@ -58,6 +99,81 @@ export function formatVisitDaySummary(
   postOpDays: number | null
 ): string {
   return `y:${admittedDays}/po:${postOpDays ?? "-"}`
+}
+
+function calculateDaysSince(isoDateString: string): number {
+  const date = new Date(isoDateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+}
+
+function buildVitalsSummary(
+  vitals: PatientRecord["vitals"]
+): VitalsSummary | undefined {
+  if (!vitals) return undefined
+
+  return {
+    temperature: vitals.temperature,
+    bloodPressure: vitals.bloodPressure,
+    pulse: vitals.pulse,
+    spO2: vitals.spO2,
+    isHypoxic: vitals.spO2 < 92,
+    isFebrile: vitals.temperature >= 38,
+    isTachycardic: vitals.pulse > 100,
+  }
+}
+
+function buildInterventionSummaries(
+  interventions?: PatientRecord["thoracicInterventions"]
+): ThoracicInterventionSummary[] {
+  if (!interventions) return []
+
+  return interventions.map((intervention) => {
+    const isActive = !intervention.removalDate
+    const dayCount = calculateDaysSince(intervention.insertionDate) + 1
+    const latestDrainage =
+      intervention.dailyDrainage.length > 0
+        ? intervention.dailyDrainage[intervention.dailyDrainage.length - 1].amount
+        : undefined
+
+    return {
+      id: intervention.id,
+      type: intervention.type,
+      side: intervention.side,
+      size: intervention.size,
+      dayCount,
+      latestDrainage,
+      isActive,
+    }
+  })
+}
+
+function buildAntibioticSummaries(
+  antibiotics?: PatientRecord["antibiotics"]
+): AntibioticSummary[] {
+  if (!antibiotics) return []
+
+  return antibiotics.map((abx) => ({
+    id: abx.id,
+    name: abx.name,
+    dayCount: calculateDaysSince(abx.startedAt) + 1,
+    isActive: !abx.stoppedAt,
+  }))
+}
+
+function buildPendingCultureSummaries(
+  cultures?: PatientRecord["labCultures"]
+): LabCultureSummary[] {
+  if (!cultures) return []
+
+  return cultures
+    .filter((c) => c.status === "ordered")
+    .map((culture) => ({
+      id: culture.id,
+      type: culture.type,
+      status: culture.status,
+    }))
 }
 
 export function buildVisitSheetEntries({
@@ -97,6 +213,14 @@ export function buildVisitSheetEntries({
         initials: patient.initials,
         roomBedCount: bed?.roomBedCount,
         roomName: bed?.roomName,
+        procedureName: patient.procedureName,
+        vitals: buildVitalsSummary(patient.vitals),
+        interventions: buildInterventionSummaries(patient.thoracicInterventions),
+        antibiotics: buildAntibioticSummaries(patient.antibiotics),
+        pendingCultures: buildPendingCultureSummaries(patient.labCultures),
+        completedRequirements: patient.completedRequirements,
+        customTodos: patient.customTodos,
+        identifierCode: patient.identifierCode,
       }
     })
 }

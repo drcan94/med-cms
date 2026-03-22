@@ -7,6 +7,18 @@ import {
 import { STAGING_BED_ID } from "../lib/patient-privacy"
 import { internal } from "./_generated/api"
 import { mutation, query } from "./_generated/server"
+import {
+  anamnesisValidator,
+  antibioticValidator,
+  consultationValidator,
+  criticalMedicationValidator,
+  externalWardValidator,
+  labCultureValidator,
+  reportsValidator,
+  thoracicInterventionValidator,
+  visitNoteValidator,
+  vitalsValidator,
+} from "./clinicalValidators"
 import { requireText, sanitizePatientFields } from "./patientValidators"
 
 export const getPatientsByOrganization = query({
@@ -61,9 +73,35 @@ export const upsertPatient = mutation({
     procedureName: v.optional(v.string()),
     serviceName: v.optional(v.string()),
     version: v.optional(v.number()),
+    gender: v.optional(v.union(v.literal("male"), v.literal("female"))),
+    isPregnant: v.optional(v.boolean()),
+    anamnesis: v.optional(anamnesisValidator),
+    vitals: v.optional(vitalsValidator),
+    criticalMedications: v.optional(criticalMedicationValidator),
+    reports: v.optional(reportsValidator),
+    externalWard: v.optional(externalWardValidator),
+    thoracicInterventions: v.optional(v.array(thoracicInterventionValidator)),
+    labCultures: v.optional(v.array(labCultureValidator)),
+    consultations: v.optional(v.array(consultationValidator)),
+    antibiotics: v.optional(v.array(antibioticValidator)),
+    visitNotes: v.optional(v.array(visitNoteValidator)),
   },
   handler: async (ctx, args) => {
     const patientFields = sanitizePatientFields(args)
+    const clinicalFields = {
+      gender: args.gender,
+      isPregnant: args.isPregnant,
+      anamnesis: args.anamnesis,
+      vitals: args.vitals,
+      criticalMedications: args.criticalMedications,
+      reports: args.reports,
+      externalWard: args.externalWard,
+      thoracicInterventions: args.thoracicInterventions,
+      labCultures: args.labCultures,
+      consultations: args.consultations,
+      antibiotics: args.antibiotics,
+      visitNotes: args.visitNotes,
+    }
 
     const conflictingBedAssignment =
       patientFields.bedId === STAGING_BED_ID
@@ -111,6 +149,7 @@ export const upsertPatient = mutation({
 
       await ctx.db.patch(patientId, {
         ...patientFields,
+        ...clinicalFields,
         version: nextVersion,
       })
       action = `patient.updated:${patientFields.bedId}`
@@ -143,6 +182,7 @@ export const upsertPatient = mutation({
 
       patientId = await ctx.db.insert("patients", {
         ...patientFields,
+        ...clinicalFields,
         version: 1,
       })
     }

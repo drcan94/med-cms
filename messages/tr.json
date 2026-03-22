@@ -129,9 +129,9 @@
         "placeholder": "A*** A***"
       },
       "identifierCode": {
-        "label": "Son 4 ID",
-        "placeholder": "4821",
-        "description": "Protokol veya dosya numarasının son 4 hanesi."
+        "label": "Son 6 ID",
+        "placeholder": "482194",
+        "description": "Protokol veya dosya numarasının son 6 hanesi."
       },
       "bedId": {
         "label": "Yatak",
@@ -160,6 +160,22 @@
       "procedureName": {
         "label": "İşlem",
         "placeholder": "Lobektomi, KABG, ORİF vb."
+      },
+      "gender": {
+        "label": "Cinsiyet",
+        "placeholder": "Cinsiyet seçin",
+        "options": {
+          "male": "Erkek",
+          "female": "Kadın"
+        }
+      },
+      "isPregnant": {
+        "label": "Gebe",
+        "placeholder": "Seçin",
+        "options": {
+          "yes": "Evet",
+          "no": "Hayır"
+        }
       }
     },
     "privacyNote": "Servis Bekleyenler'deki hastalar baş harfler ve ID ile yerelde eşleştirilebilir.",
@@ -171,8 +187,8 @@
     },
     "toasts": {
       "missingContext": "Önce bir klinik seçin ve giriş yapın.",
-      "requiredFields": "Ad soyad, son 4 ID, tanı ve yatış tarihi gereklidir.",
-      "invalidIdentifierCode": "Son 4 ID tam olarak 4 karakter olmalıdır.",
+      "requiredFields": "Ad soyad, son 6 ID, tanı ve yatış tarihi gereklidir.",
+      "invalidIdentifierCode": "Son 6 ID tam olarak 6 karakter olmalıdır.",
       "updated": "Hasta güncellendi.",
       "created": "Hasta eklendi.",
       "saveError": "Hasta kaydedilemedi.",
@@ -195,6 +211,157 @@
         "todoDeleted": "Görev silindi.",
         "error": "Güncelleme başarısız."
       }
+    }
+  },
+  "PatientDialogView": {
+    "subtitle": "ID: {identifierCode}",
+    "editButton": "Düzenle",
+    "closeButton": "Kapat",
+    "sections": {
+      "patientInfo": "Hasta Bilgileri",
+      "clinicalInfo": "Klinik Bilgiler",
+      "timeline": "Zaman Çizelgesi",
+      "vitals": "Vital Bulgular",
+      "thoracic": "Tüp ve Drenler",
+      "medications": "İlaçlar ve Laboratuvar"
+    },
+    "daysAgo": "{count, plural, one {Gün #} other {Gün #}}"
+  },
+  "PatientFormTabs": {
+    "basic": "Temel Bilgiler",
+    "clinical": "Vital ve Öykü",
+    "thoracic": "Tüp ve Drenler",
+    "meds": "İlaç ve Lab"
+  },
+  "PatientFormSections": {
+    "vitals": {
+      "title": "Vital Bulgular",
+      "initialize": "Vital başlat",
+      "temperature": "Ateş (°C)",
+      "bloodPressure": "Tansiyon",
+      "bloodPressureFormat": "Format: 120/80",
+      "pulse": "Nabız (dk)",
+      "spO2": "SpO2 (%)",
+      "symptoms": {
+        "title": "Semptomlar"
+      },
+      "systemReview": {
+        "title": "Sistem Sorgulaması",
+        "categories": {
+          "constitutional": "Konstitüsyonel",
+          "respiratory": "Solunum",
+          "cardiac": "Kardiyak",
+          "gastrointestinal": "Gastrointestinal",
+          "genitourinary": "Genitoüriner",
+          "other": "Diğer"
+        },
+        "symptoms": {
+          "fever": "Ateş",
+          "weightLoss": "Kilo Kaybı",
+          "nightSweats": "Gece Terlemesi",
+          "fatigue": "Halsizlik",
+          "cough": "Öksürük",
+          "sputum": "Balgam",
+          "hemoptysis": "Hemoptizi",
+          "dyspneaExertion": "Eforla Nefes Darlığı",
+          "dyspneaRest": "İstirahatte Nefes Darlığı",
+          "orthopnea": "Ortopne",
+          "wheezing": "Hırıltı",
+          "chestPain": "Göğüs Ağrısı",
+          "palpitation": "Çarpıntı",
+          "syncope": "Senkop",
+          "legEdema": "Bacak Ödemi",
+          "dysphagia": "Yutma Güçlüğü",
+          "pyrosis": "Pirozis",
+          "nauseaVomiting": "Bulantı/Kusma",
+          "abdominalPain": "Karın Ağrısı",
+          "constipationDiarrhea": "Kabızlık/İshal",
+          "hematuria": "Hematüri",
+          "dysuria": "Dizüri",
+          "frequentUrination": "Sık İdrara Çıkma",
+          "hoarseness": "Ses Kısıklığı",
+          "jointPain": "Eklem Ağrısı",
+          "alteredConsciousness": "Bilinç Değişikliği"
+        }
+      }
+    },
+    "anamnesis": {
+      "title": "Anamnez",
+      "initialize": "Anamnez başlat",
+      "chiefComplaint": "Başvuru Şikayeti",
+      "chiefComplaintPlaceholder": "Yatış nedeni",
+      "historyOfPresentIllness": "Hastalık Öyküsü",
+      "historyPlaceholder": "Öyküyü tanımlayın...",
+      "knownDiseases": "Bilinen Hastalıklar",
+      "knownDiseasesPlaceholder": "Diyabet\nHipertansiyon\nKAH",
+      "pastSurgeries": "Geçirilmiş Ameliyatlar",
+      "pastSurgeriesPlaceholder": "Apendektomi 2015\nKolesistektomi 2018",
+      "allergies": "Alerjiler",
+      "allergiesPlaceholder": "Penisilin\nNSAİİ",
+      "onePerLine": "Her satıra bir tane"
+    },
+    "thoracic": {
+      "title": "Torasik Girişimler",
+      "description": "Göğüs tüpleri ve drenler",
+      "addIntervention": "Girişim ekle",
+      "empty": "Torasik girişim kaydı yok.",
+      "addFirst": "İlk girişimi ekle",
+      "interventionTitle": "Girişim",
+      "remove": "Kaldır",
+      "type": "Tür",
+      "types": {
+        "chestTube": "Göğüs Tüpü",
+        "drain": "Dren"
+      },
+      "side": "Taraf",
+      "sides": {
+        "right": "Sağ",
+        "left": "Sol",
+        "bilateral": "Bilateral"
+      },
+      "size": "Boyut",
+      "insertionDate": "Takılma Tarihi",
+      "removalDate": "Çıkarılma Tarihi",
+      "indication": "Endikasyon",
+      "indicationPlaceholder": "Plevral efüzyon, pnömotoraks...",
+      "usedUltrasound": "USG eşliğinde",
+      "cytologySent": "Sitoloji gönderildi",
+      "complicationOccurred": "Komplikasyon",
+      "pleurodesis": "Plörodezis",
+      "insertedByYear": "Takan (yıl)"
+    },
+    "labs": {
+      "title": "Laboratuvar Kültürleri",
+      "description": "Kültürler ve biyokimya",
+      "addCulture": "Kültür ekle",
+      "empty": "Laboratuvar kültürü kaydı yok.",
+      "type": "Tür",
+      "types": {
+        "blood": "Kan Kültürü",
+        "urine": "İdrar Kültürü",
+        "sputum": "Balgam Kültürü",
+        "fluid": "Sıvı Kültürü",
+        "biochemistry": "Sıvı Biyokimyası",
+        "cytology": "Sitoloji"
+      },
+      "status": "Durum",
+      "statuses": {
+        "ordered": "İstendi",
+        "resulted": "Sonuçlandı",
+        "printed": "Yazdırıldı"
+      },
+      "result": "Sonuç",
+      "resultPlaceholder": "Kültür sonucu..."
+    },
+    "antibiotics": {
+      "title": "Antibiyotikler",
+      "description": "Aktif ve geçmiş antibiyotikler",
+      "addAntibiotic": "Antibiyotik ekle",
+      "empty": "Antibiyotik kaydı yok.",
+      "name": "İsim",
+      "namePlaceholder": "Seftriakson 1g IV",
+      "startedAt": "Başlangıç",
+      "stoppedAt": "Bitiş"
     }
   },
   "SettingsLayout": {
@@ -496,17 +663,20 @@
       "selectOrganization": "Vizit listesini yüklemek için bir klinik seçin.",
       "loadingVisitSheet": "Hastalar yükleniyor..."
     },
-    "phaseBadge": "Faz 6",
+    "phaseBadge": "Faz 4",
     "featureBadge": "Vizit ve Yazdır",
     "orderApplied": "Servis yerleşimine göre sıralı",
     "orderFallback": "Yatak numarasına göre sıralı",
     "title": "Günlük Vizit",
-    "description": "Yatak başı inceleme için büyük kartlar. Yazdırma modu yoğun A4 vizit çizelgesi oluşturur.",
+    "description": "Hızlı görevlerle yatak başı inceleme için klinik kartlar. Yazdırma modu vital, tüp ve ilaçlarla yoğun A4 vizit çizelgesi oluşturur.",
     "print": "Vizit Çizelgesi Yazdır",
     "metrics": {
       "patients": "Hastalar",
       "configuredBeds": "Yataklar",
-      "localRosterNames": "İçe aktarılan adlar"
+      "localRosterNames": "İçe aktarılan adlar",
+      "activeTubes": "Aktif Tüpler",
+      "activeAntibiotics": "Antibiyotikler",
+      "vitalsAlerts": "Vital Uyarıları"
     },
     "empty": {
       "title": "Vizit için hasta yok",
@@ -521,7 +691,12 @@
     "days": "Günler",
     "diagnosis": "Tanı",
     "staging": "Servis Bekleyenler",
-    "bedLabel": "Yatak {number}"
+    "bedLabel": "Yatak {number}",
+    "vitals": "Vitaller",
+    "tubesDrains": "Tüpler ve Drenler",
+    "antibiotics": "Antibiyotikler",
+    "pendingCultures": "Bekleyen Kültürler",
+    "todosTitle": "Hızlı Görevler"
   },
   "PrintableVisitSheet": {
     "title": "Vizit Çizelgesi",
@@ -529,15 +704,25 @@
     "patients": "Hastalar: {count}",
     "headers": {
       "bed": "Yatak",
-      "fullName": "Tam Ad",
+      "fullName": "Hasta",
       "days": "Günler",
-      "diagnosis": "Tanı",
+      "diagnosis": "Tanı & Operasyon",
       "drainsFluids": "Dren/Sıvı",
-      "notes": "Notlar"
+      "notes": "Notlar",
+      "clinicalStatus": "Klinik Durum",
+      "tubesDrains": "Tüpler/Drenler",
+      "medsLab": "İlaçlar & Lab",
+      "todoNotes": "Notlar & Yapılacaklar"
     },
     "empty": "Hasta mevcut değil.",
     "staging": "Servis Bekleyenler",
     "bedLabel": "Yatak {number}"
+  },
+  "VisitTodoList": {
+    "title": "Hızlı Görevler",
+    "placeholder": "Görev ekle...",
+    "noPending": "Bekleyen görev yok",
+    "completedCount": "{count} tamamlandı"
   },
   "MarketingPage": {
     "metadata": {

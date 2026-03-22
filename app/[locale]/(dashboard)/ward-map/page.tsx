@@ -9,7 +9,7 @@ import { toast } from "sonner"
 
 import { api } from "@/convex/_generated/api"
 import type { Doc } from "@/convex/_generated/dataModel"
-import { PatientSheet } from "@/components/organisms/patient-sheet"
+import { PatientDialog } from "@/components/organisms/patient-dialog"
 import { WardMapHero } from "@/components/organisms/ward-map-hero"
 import { WardPlacementLane } from "@/components/organisms/ward-placement-lane"
 import { WardRoom } from "@/components/organisms/ward-room"
@@ -237,7 +237,8 @@ export default function WardMapPage() {
         </DragDropContext>
       </div>
 
-      <PatientSheet
+      <PatientDialog
+        key={`dialog-${selectedPatient?._id ?? "new"}-${sheetOpen}`}
         open={!isLocked && sheetOpen}
         onOpenChange={(nextOpen) => {
           setSheetOpen(nextOpen)

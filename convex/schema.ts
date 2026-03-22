@@ -5,10 +5,22 @@ import {
   clinicConventionsValidator,
   wardRoomValidator,
 } from "./clinicSettingsValidators"
+import {
+  anamnesisValidator,
+  antibioticValidator,
+  consultationValidator,
+  criticalMedicationValidator,
+  externalWardValidator,
+  labCultureValidator,
+  reportsValidator,
+  thoracicInterventionValidator,
+  visitNoteValidator,
+  vitalsValidator,
+} from "./clinicalValidators"
 
 /**
  * Convex adds `_id` and `_creationTime` to every document automatically.
- * Patient full names never enter this schema; only masked initials and a 4-character
+ * Patient full names never enter this schema; only masked initials and a 6-character
  * identifier code are persisted for local disambiguation.
  */
 export default defineSchema({
@@ -57,6 +69,30 @@ export default defineSchema({
         })
       )
     ),
+    /** Patient demographic: biological sex. */
+    gender: v.optional(v.union(v.literal("male"), v.literal("female"))),
+    /** Pregnancy status for female patients. */
+    isPregnant: v.optional(v.boolean()),
+    /** Clinical anamnesis (history, complaints, allergies). */
+    anamnesis: v.optional(anamnesisValidator),
+    /** Latest vital signs. */
+    vitals: v.optional(vitalsValidator),
+    /** Critical medications requiring close monitoring. */
+    criticalMedications: v.optional(criticalMedicationValidator),
+    /** Clinical reports (SFT, PET, pathology, etc.). */
+    reports: v.optional(reportsValidator),
+    /** External ward transfer information. */
+    externalWard: v.optional(externalWardValidator),
+    /** Thoracic interventions (chest tubes, drains). */
+    thoracicInterventions: v.optional(v.array(thoracicInterventionValidator)),
+    /** Lab cultures and biochemistry. */
+    labCultures: v.optional(v.array(labCultureValidator)),
+    /** Specialty consultations. */
+    consultations: v.optional(v.array(consultationValidator)),
+    /** Active and past antibiotics. */
+    antibiotics: v.optional(v.array(antibioticValidator)),
+    /** Daily visit notes. */
+    visitNotes: v.optional(v.array(visitNoteValidator)),
   })
     .index("by_organization_id", ["organizationId"])
     .index("by_organization_bed_id", ["organizationId", "bedId"]),

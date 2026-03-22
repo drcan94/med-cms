@@ -1,5 +1,5 @@
-export const IDENTIFIER_CODE_LENGTH = 4
-const IDENTIFIER_CODE_PATTERN = /^[A-Z0-9]{4}$/
+export const IDENTIFIER_CODE_LENGTH = 6
+const IDENTIFIER_CODE_PATTERN = /^[A-Z0-9]{6}$/
 
 export function normalizeIdentifierCode(value: string): string {
   return value.trim().toUpperCase()
@@ -20,7 +20,7 @@ export function requireIdentifierCode(
   const normalizedValue = normalizeIdentifierCode(value)
 
   if (!IDENTIFIER_CODE_PATTERN.test(normalizedValue)) {
-    throw new Error(`${fieldName} must be exactly 4 letters or digits.`)
+    throw new Error(`${fieldName} must be exactly 6 letters or digits.`)
   }
 
   return normalizedValue
@@ -29,7 +29,7 @@ export function requireIdentifierCode(
 /**
  * Staged patients all share the same placeholder bed, so browser-local full-name
  * lookups need a second discriminator beyond `bedId`. Pairing masked initials with
- * the 4-character identifier keeps the matching key de-identified but stable.
+ * the 6-character identifier keeps the matching key de-identified but stable.
  */
 export function buildPatientIdentityKey(
   initials: string,

@@ -1,3 +1,12 @@
+export function formatDisplayDate(isoString: string): string {
+  const date = new Date(isoString)
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
 export function formatCompletionDate(isoString: string): string {
   const date = new Date(isoString)
   const now = new Date()

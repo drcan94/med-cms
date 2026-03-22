@@ -129,9 +129,9 @@
         "placeholder": "A*** A***"
       },
       "identifierCode": {
-        "label": "Last 4 ID",
-        "placeholder": "4821",
-        "description": "Last 4 digits of MRN or file number."
+        "label": "Last 6 ID",
+        "placeholder": "482194",
+        "description": "Last 6 digits of MRN or file number."
       },
       "bedId": {
         "label": "Bed",
@@ -160,6 +160,22 @@
       "procedureName": {
         "label": "Procedure",
         "placeholder": "Lobectomy, CABG, ORIF, etc."
+      },
+      "gender": {
+        "label": "Gender",
+        "placeholder": "Select gender",
+        "options": {
+          "male": "Male",
+          "female": "Female"
+        }
+      },
+      "isPregnant": {
+        "label": "Pregnant",
+        "placeholder": "Select",
+        "options": {
+          "yes": "Yes",
+          "no": "No"
+        }
       }
     },
     "privacyNote": "Patients in Waiting List can still be matched locally by initials and ID.",
@@ -171,8 +187,8 @@
     },
     "toasts": {
       "missingContext": "Select a clinic and sign in first.",
-      "requiredFields": "Full name, last 4 ID, diagnosis, and admission date are required.",
-      "invalidIdentifierCode": "Last 4 ID must be exactly 4 characters.",
+      "requiredFields": "Full name, last 6 ID, diagnosis, and admission date are required.",
+      "invalidIdentifierCode": "Last 6 ID must be exactly 6 characters.",
       "updated": "Patient updated.",
       "created": "Patient added.",
       "saveError": "Unable to save patient.",
@@ -195,6 +211,157 @@
         "todoDeleted": "Task removed.",
         "error": "Unable to update."
       }
+    }
+  },
+  "PatientDialogView": {
+    "subtitle": "ID: {identifierCode}",
+    "editButton": "Edit",
+    "closeButton": "Close",
+    "sections": {
+      "patientInfo": "Patient Information",
+      "clinicalInfo": "Clinical Information",
+      "timeline": "Timeline",
+      "vitals": "Vitals",
+      "thoracic": "Tubes & Drains",
+      "medications": "Medications & Labs"
+    },
+    "daysAgo": "{count, plural, one {Day #} other {Day #}}"
+  },
+  "PatientFormTabs": {
+    "basic": "Basic Info",
+    "clinical": "Vitals & History",
+    "thoracic": "Tubes & Drains",
+    "meds": "Meds & Labs"
+  },
+  "PatientFormSections": {
+    "vitals": {
+      "title": "Vital Signs",
+      "initialize": "Initialize vitals",
+      "temperature": "Temperature (°C)",
+      "bloodPressure": "Blood Pressure",
+      "bloodPressureFormat": "Format: 120/80",
+      "pulse": "Pulse (bpm)",
+      "spO2": "SpO2 (%)",
+      "symptoms": {
+        "title": "Symptoms"
+      },
+      "systemReview": {
+        "title": "System Review",
+        "categories": {
+          "constitutional": "Constitutional",
+          "respiratory": "Respiratory",
+          "cardiac": "Cardiac",
+          "gastrointestinal": "Gastrointestinal",
+          "genitourinary": "Genitourinary",
+          "other": "Other"
+        },
+        "symptoms": {
+          "fever": "Fever",
+          "weightLoss": "Weight Loss",
+          "nightSweats": "Night Sweats",
+          "fatigue": "Fatigue",
+          "cough": "Cough",
+          "sputum": "Sputum",
+          "hemoptysis": "Hemoptysis",
+          "dyspneaExertion": "Dyspnea on Exertion",
+          "dyspneaRest": "Dyspnea at Rest",
+          "orthopnea": "Orthopnea",
+          "wheezing": "Wheezing",
+          "chestPain": "Chest Pain",
+          "palpitation": "Palpitation",
+          "syncope": "Syncope",
+          "legEdema": "Leg Edema",
+          "dysphagia": "Dysphagia",
+          "pyrosis": "Heartburn",
+          "nauseaVomiting": "Nausea/Vomiting",
+          "abdominalPain": "Abdominal Pain",
+          "constipationDiarrhea": "Constipation/Diarrhea",
+          "hematuria": "Hematuria",
+          "dysuria": "Dysuria",
+          "frequentUrination": "Frequent Urination",
+          "hoarseness": "Hoarseness",
+          "jointPain": "Joint Pain",
+          "alteredConsciousness": "Altered Consciousness"
+        }
+      }
+    },
+    "anamnesis": {
+      "title": "Anamnesis",
+      "initialize": "Initialize anamnesis",
+      "chiefComplaint": "Chief Complaint",
+      "chiefComplaintPlaceholder": "Primary reason for admission",
+      "historyOfPresentIllness": "History of Present Illness",
+      "historyPlaceholder": "Describe the history...",
+      "knownDiseases": "Known Diseases",
+      "knownDiseasesPlaceholder": "Diabetes\nHypertension\nCAD",
+      "pastSurgeries": "Past Surgeries",
+      "pastSurgeriesPlaceholder": "Appendectomy 2015\nCholecystectomy 2018",
+      "allergies": "Allergies",
+      "allergiesPlaceholder": "Penicillin\nNSAIDs",
+      "onePerLine": "One per line"
+    },
+    "thoracic": {
+      "title": "Thoracic Interventions",
+      "description": "Chest tubes and drains",
+      "addIntervention": "Add intervention",
+      "empty": "No thoracic interventions recorded.",
+      "addFirst": "Add first intervention",
+      "interventionTitle": "Intervention",
+      "remove": "Remove",
+      "type": "Type",
+      "types": {
+        "chestTube": "Chest Tube",
+        "drain": "Drain"
+      },
+      "side": "Side",
+      "sides": {
+        "right": "Right",
+        "left": "Left",
+        "bilateral": "Bilateral"
+      },
+      "size": "Size",
+      "insertionDate": "Insertion Date",
+      "removalDate": "Removal Date",
+      "indication": "Indication",
+      "indicationPlaceholder": "Pleural effusion, pneumothorax...",
+      "usedUltrasound": "USG-guided",
+      "cytologySent": "Cytology sent",
+      "complicationOccurred": "Complication",
+      "pleurodesis": "Pleurodesis",
+      "insertedByYear": "Inserted by (year)"
+    },
+    "labs": {
+      "title": "Lab Cultures",
+      "description": "Cultures and biochemistry",
+      "addCulture": "Add culture",
+      "empty": "No lab cultures recorded.",
+      "type": "Type",
+      "types": {
+        "blood": "Blood Culture",
+        "urine": "Urine Culture",
+        "sputum": "Sputum Culture",
+        "fluid": "Fluid Culture",
+        "biochemistry": "Fluid Biochemistry",
+        "cytology": "Cytology"
+      },
+      "status": "Status",
+      "statuses": {
+        "ordered": "Ordered",
+        "resulted": "Resulted",
+        "printed": "Printed"
+      },
+      "result": "Result",
+      "resultPlaceholder": "Culture result..."
+    },
+    "antibiotics": {
+      "title": "Antibiotics",
+      "description": "Active and past antibiotics",
+      "addAntibiotic": "Add antibiotic",
+      "empty": "No antibiotics recorded.",
+      "name": "Name",
+      "namePlaceholder": "Ceftriaxone 1g IV",
+      "startedAt": "Started",
+      "stoppedAt": "Stopped"
     }
   },
   "SettingsLayout": {
@@ -496,17 +663,20 @@
       "selectOrganization": "Select a clinic to load the rounds list.",
       "loadingVisitSheet": "Loading patients..."
     },
-    "phaseBadge": "Phase 6",
+    "phaseBadge": "Phase 4",
     "featureBadge": "Visit & Print",
     "orderApplied": "Sorted by ward layout",
     "orderFallback": "Sorted by bed number",
     "title": "Daily Rounds",
-    "description": "Large cards for bedside review. Print mode creates a dense A4 visit sheet.",
+    "description": "Clinical cards for bedside review with quick todos. Print mode creates a dense A4 visit sheet with vitals, tubes, and medications.",
     "print": "Print Visit Sheet",
     "metrics": {
       "patients": "Patients",
       "configuredBeds": "Beds",
-      "localRosterNames": "Names imported"
+      "localRosterNames": "Names imported",
+      "activeTubes": "Active Tubes",
+      "activeAntibiotics": "Antibiotics",
+      "vitalsAlerts": "Vitals Alerts"
     },
     "empty": {
       "title": "No patients for rounds",
@@ -521,7 +691,12 @@
     "days": "Days",
     "diagnosis": "Diagnosis",
     "staging": "Waiting List",
-    "bedLabel": "Bed {number}"
+    "bedLabel": "Bed {number}",
+    "vitals": "Vitals",
+    "tubesDrains": "Tubes & Drains",
+    "antibiotics": "Antibiotics",
+    "pendingCultures": "Pending Cultures",
+    "todosTitle": "Quick Todos"
   },
   "PrintableVisitSheet": {
     "title": "Visit Sheet",
@@ -529,15 +704,25 @@
     "patients": "Patients: {count}",
     "headers": {
       "bed": "Bed",
-      "fullName": "Full Name",
+      "fullName": "Patient",
       "days": "Days",
-      "diagnosis": "Diagnosis",
+      "diagnosis": "Diagnosis & Surgery",
       "drainsFluids": "Drains/Fluids",
-      "notes": "Notes"
+      "notes": "Notes",
+      "clinicalStatus": "Clinical Status",
+      "tubesDrains": "Tubes/Drains",
+      "medsLab": "Meds & Lab",
+      "todoNotes": "Notes & Todos"
     },
     "empty": "No patients available.",
     "staging": "Waiting List",
     "bedLabel": "Bed {number}"
+  },
+  "VisitTodoList": {
+    "title": "Quick Todos",
+    "placeholder": "Add a task...",
+    "noPending": "No pending tasks",
+    "completedCount": "{count} completed"
   },
   "MarketingPage": {
     "metadata": {

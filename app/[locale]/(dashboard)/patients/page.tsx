@@ -6,7 +6,7 @@ import { Plus, ShieldCheck } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 import type { Doc } from "@/convex/_generated/dataModel"
-import { PatientSheet } from "@/components/organisms/patient-sheet"
+import { PatientDialog } from "@/components/organisms/patient-dialog"
 import { PatientTable } from "@/components/organisms/patient-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -98,7 +98,8 @@ export default function PatientsPage() {
         </Card>
       </div>
 
-      <PatientSheet
+      <PatientDialog
+        key={`dialog-${selectedPatient?._id ?? "new"}-${sheetOpen}`}
         open={isLocked ? false : sheetOpen}
         onOpenChange={(nextOpen) => {
           setSheetOpen(nextOpen)

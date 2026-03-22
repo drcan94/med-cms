@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useQuery } from "convex/react"
-import { Printer } from "lucide-react"
+import { AlertTriangle, Printer, Stethoscope, Syringe } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 import { api } from "@/convex/_generated/api"
@@ -26,16 +26,32 @@ import { buildVisitSheetEntries } from "@/lib/visit-sheet"
 type PatientRecord = Doc<"patients">
 
 type VisitMetricCardProps = {
+  icon?: React.ReactNode
   label: string
   value: number
+  variant?: "default" | "warning"
 }
 
-function VisitMetricCard({ label, value }: Readonly<VisitMetricCardProps>) {
+function VisitMetricCard({
+  icon,
+  label,
+  value,
+  variant = "default",
+}: Readonly<VisitMetricCardProps>) {
   return (
-    <div className="rounded-xl border bg-background px-4 py-4 shadow-xs">
-      <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-        {label}
-      </p>
+    <div
+      className={`rounded-xl border px-4 py-4 shadow-xs ${
+        variant === "warning"
+          ? "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
+          : "bg-background"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        {icon}
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          {label}
+        </p>
+      </div>
       <p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p>
     </div>
   )
@@ -46,10 +62,7 @@ type VisitStateCardProps = {
   title: string
 }
 
-function VisitStateCard({
-  description,
-  title,
-}: Readonly<VisitStateCardProps>) {
+function VisitStateCard({ description, title }: Readonly<VisitStateCardProps>) {
   return (
     <Card className="print:hidden">
       <CardHeader>
@@ -62,7 +75,7 @@ function VisitStateCard({
 
 export default function VisitModePage() {
   const t = useTranslations("VisitPage")
-  const { entryCount, getFullPatientName } = useLocalRoster()
+  const { getFullPatientName } = useLocalRoster()
   const { isLoaded, orgId } = useAuth()
   const settings = useQuery(
     api.clinicSettings.getClinicSettings,
@@ -82,42 +95,51 @@ export default function VisitModePage() {
       }),
     [getFullPatientName, patients, settings?.wardLayout]
   )
+
   const totalBeds = useMemo(
     () => getTotalBedCapacity(settings?.wardLayout ?? []),
     [settings?.wardLayout]
   )
 
+  const clinicalSummary = useMemo(() => {
+    let activeTubes = 0
+    let activeAntibiotics = 0
+    let patientsWithAlerts = 0
+
+    for (const entry of visitEntries) {
+      activeTubes += entry.interventions.filter((i) => i.isActive).length
+      activeAntibiotics += entry.antibiotics.filter((a) => a.isActive).length
+
+      if (entry.vitals?.isFebrile || entry.vitals?.isHypoxic || entry.vitals?.isTachycardic) {
+        patientsWithAlerts++
+      }
+    }
+
+    return { activeTubes, activeAntibiotics, patientsWithAlerts }
+  }, [visitEntries])
+
   if (!isLoaded) {
     return (
-      <VisitStateCard
-        title={t("state.title")}
-        description={t("state.loadingOrganization")}
-      />
+      <VisitStateCard title={t("state.title")} description={t("state.loadingOrganization")} />
     )
   }
 
   if (!orgId) {
     return (
-      <VisitStateCard
-        title={t("state.title")}
-        description={t("state.selectOrganization")}
-      />
+      <VisitStateCard title={t("state.title")} description={t("state.selectOrganization")} />
     )
   }
 
   if (settings === undefined || patients === undefined) {
     return (
-      <VisitStateCard
-        title={t("state.title")}
-        description={t("state.loadingVisitSheet")}
-      />
+      <VisitStateCard title={t("state.title")} description={t("state.loadingVisitSheet")} />
     )
   }
 
   const usesWardLayoutOrder = settings.wardLayout.length > 0
 
   return (
-    <div className="grid gap-6 pb-24 print:block print:pb-0 sm:pb-0">
+    <div className="grid gap-6 pb-24 print:block print:gap-0 print:pb-0 sm:pb-0">
       <section className="grid gap-4 rounded-2xl border bg-background p-6 shadow-xs print:hidden lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -147,10 +169,27 @@ export default function VisitModePage() {
         </Button>
       </section>
 
-      <section className="grid gap-3 print:hidden sm:grid-cols-3">
-        <VisitMetricCard label={t("metrics.patients")} value={visitEntries.length} />
+      <section className="grid gap-3 print:hidden sm:grid-cols-2 lg:grid-cols-5">
+        <VisitMetricCard
+          icon={<Stethoscope className="size-4 text-muted-foreground" />}
+          label={t("metrics.patients")}
+          value={visitEntries.length}
+        />
         <VisitMetricCard label={t("metrics.configuredBeds")} value={totalBeds} />
-        <VisitMetricCard label={t("metrics.localRosterNames")} value={entryCount} />
+        <VisitMetricCard
+          icon={<Syringe className="size-4 text-emerald-600" />}
+          label={t("metrics.activeTubes")}
+          value={clinicalSummary.activeTubes}
+        />
+        <VisitMetricCard label={t("metrics.activeAntibiotics")} value={clinicalSummary.activeAntibiotics} />
+        {clinicalSummary.patientsWithAlerts > 0 && (
+          <VisitMetricCard
+            icon={<AlertTriangle className="size-4 text-amber-600" />}
+            label={t("metrics.vitalsAlerts")}
+            value={clinicalSummary.patientsWithAlerts}
+            variant="warning"
+          />
+        )}
       </section>
 
       {visitEntries.length > 0 ? (
@@ -171,7 +210,7 @@ export default function VisitModePage() {
         </Card>
       )}
 
-      <div className="fixed inset-x-4 bottom-4 z-30 sm:hidden print:hidden">
+      <div className="fixed inset-x-4 bottom-4 z-30 print:hidden sm:hidden">
         <Button
           type="button"
           size="lg"

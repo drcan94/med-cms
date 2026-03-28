@@ -903,5 +903,12 @@
     "title": "Kliniğinizi Seçin",
     "description": "Devam etmek için mevcut bir klinik seçin veya WardOS'a başlamak için yeni bir klinik oluşturun.",
     "redirecting": "Çalışma alanına yönlendiriliyor..."
+  },
+  "AuthSyncWrapper": {
+    "loading": "Yükleniyor...",
+    "authenticating": "Kimlik doğrulanıyor...",
+    "connecting": "Çalışma alanına bağlanılıyor...",
+    "userSync": "Hesabınız hazırlanıyor...",
+    "membershipSync": "Klinik erişimi doğrulanıyor..."
   }
 }

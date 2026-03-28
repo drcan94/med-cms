@@ -21,6 +21,45 @@ export const getCurrentUser = query({
   },
 })
 
+export const getAuthSyncStatus = query({
+  args: {
+    organizationId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+
+    if (!identity) {
+      return { status: "unauthenticated" as const }
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique()
+
+    if (!user) {
+      return { status: "user_pending" as const }
+    }
+
+    if (!args.organizationId) {
+      return { status: "ready" as const, user }
+    }
+
+    const membership = await ctx.db
+      .query("organizationMemberships")
+      .withIndex("by_org_and_user", (q) =>
+        q.eq("organizationId", args.organizationId!).eq("userId", identity.subject)
+      )
+      .unique()
+
+    if (!membership) {
+      return { status: "membership_pending" as const, user }
+    }
+
+    return { status: "ready" as const, user, membership }
+  },
+})
+
 export const getUserByClerkId = query({
   args: {
     clerkId: v.string(),

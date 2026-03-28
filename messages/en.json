@@ -903,5 +903,12 @@
     "title": "Select Your Clinic",
     "description": "Choose an existing clinic to continue, or create a new one to get started with WardOS.",
     "redirecting": "Redirecting to workspace..."
+  },
+  "AuthSyncWrapper": {
+    "loading": "Loading...",
+    "authenticating": "Authenticating...",
+    "connecting": "Connecting to workspace...",
+    "userSync": "Setting up your account...",
+    "membershipSync": "Verifying clinic access..."
   }
 }

@@ -23,6 +23,8 @@ const PROTECTED_PATH_PREFIXES = [
 
 const ORG_EXEMPT_PATHS = ["/organization-selection", "/super-admin"]
 
+const AUTH_PATHS = ["/sign-in", "/sign-up", "/organization-selection"]
+
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
@@ -31,6 +33,12 @@ function isProtectedPath(pathname: string): boolean {
 
 function isOrgExemptPath(pathname: string): boolean {
   return ORG_EXEMPT_PATHS.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+}
+
+function isAuthPath(pathname: string): boolean {
+  return AUTH_PATHS.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   )
 }
@@ -65,12 +73,20 @@ export default clerkMiddleware(async (auth, request) => {
   const resolvedUrl = getResolvedUrl(request, i18nResponse)
   const locale = getLocaleFromPathname(resolvedUrl.pathname)
   const unlocalizedPathname = stripLocalePrefix(resolvedUrl.pathname)
+  const { userId, orgId } = await auth()
+
+  if (isAuthPath(unlocalizedPathname)) {
+    if (userId && orgId) {
+      const patientsUrl = new URL(getAuthPathnames(locale).patients, request.url)
+      return NextResponse.redirect(patientsUrl)
+    }
+
+    return i18nResponse
+  }
 
   if (!isProtectedPath(unlocalizedPathname)) {
     return i18nResponse
   }
-
-  const { userId, orgId } = await auth()
 
   if (!userId) {
     const signInUrl = new URL(getAuthPathnames(locale).signIn, request.url)

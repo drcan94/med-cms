@@ -1,7 +1,7 @@
 "use client"
 
-import { Controller, useFieldArray, type Control } from "react-hook-form"
-import { FlaskConical, Pill, Plus, Trash2 } from "lucide-react"
+import { Controller, useFieldArray, type Control, type UseFormSetValue, type UseFormWatch } from "react-hook-form"
+import { AlertTriangle, Droplets, FlaskConical, Pill, Plus, Syringe, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 import type { PatientFormData } from "@/lib/schemas/patient-form.schema"
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -27,6 +28,8 @@ import {
 
 type MedicationsLabsSectionProps = {
   control: Control<PatientFormData>
+  setValue: UseFormSetValue<PatientFormData>
+  watch: UseFormWatch<PatientFormData>
 }
 
 function generateLabId(): string {
@@ -39,6 +42,8 @@ function generateAbxId(): string {
 
 export function MedicationsLabsSection({
   control,
+  setValue,
+  watch,
 }: Readonly<MedicationsLabsSectionProps>) {
   const t = useTranslations("PatientFormSections")
 
@@ -60,6 +65,34 @@ export function MedicationsLabsSection({
     name: "antibiotics",
   })
 
+  const {
+    fields: anticoagulantFields,
+    append: appendAnticoagulant,
+    remove: removeAnticoagulant,
+  } = useFieldArray({
+    control,
+    name: "criticalMedications.anticoagulants",
+  })
+
+  const {
+    fields: antidiabeticFields,
+    append: appendAntidiabetic,
+    remove: removeAntidiabetic,
+  } = useFieldArray({
+    control,
+    name: "criticalMedications.antidiabetics",
+  })
+
+  const initializeCriticalMedications = () => {
+    const current = watch("criticalMedications")
+    if (!current) {
+      setValue("criticalMedications", {
+        anticoagulants: [],
+        antidiabetics: [],
+      })
+    }
+  }
+
   const handleAddLabCulture = () => {
     appendLab({
       id: generateLabId(),
@@ -77,8 +110,235 @@ export function MedicationsLabsSection({
     })
   }
 
+  const handleAddAnticoagulant = () => {
+    initializeCriticalMedications()
+    appendAnticoagulant({
+      name: "",
+      lastDoseAt: new Date().toISOString().slice(0, 16),
+    })
+  }
+
+  const handleAddAntidiabetic = (type: "oral" | "insulin") => {
+    initializeCriticalMedications()
+    appendAntidiabetic({
+      type,
+      name: "",
+      lastDoseAt: new Date().toISOString().slice(0, 16),
+    })
+  }
+
   return (
     <div className="space-y-8">
+      {/* Critical Medications - Preoperative Section */}
+      <FieldSet>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-4 text-destructive" />
+            <FieldLegend variant="label" className="mb-0">{t("criticalMeds.title")}</FieldLegend>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">{t("criticalMeds.description")}</p>
+
+        {/* Anticoagulants Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Droplets className="size-3.5 text-red-500" />
+              <span className="text-sm font-medium">{t("criticalMeds.anticoagulants.title")}</span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddAnticoagulant}
+            >
+              <Plus className="mr-1.5 size-3.5" />
+              {t("criticalMeds.anticoagulants.add")}
+            </Button>
+          </div>
+
+          <FieldGroup className="gap-2">
+            {anticoagulantFields.length === 0 ? (
+              <Card className="border-dashed border-red-200 bg-red-50/30">
+                <CardContent className="flex flex-col items-center justify-center py-4 text-center">
+                  <p className="text-xs text-muted-foreground">{t("criticalMeds.anticoagulants.empty")}</p>
+                </CardContent>
+              </Card>
+            ) : (
+              anticoagulantFields.map((field, index) => (
+                <Card key={field.id} className="border-red-200 bg-red-50/20">
+                  <CardContent className="grid gap-3 p-3 sm:grid-cols-3">
+                    <Controller
+                      name={`criticalMedications.anticoagulants.${index}.name`}
+                      control={control}
+                      render={({ field: controllerField, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel htmlFor={controllerField.name} className="text-xs">
+                            {t("criticalMeds.anticoagulants.name")}
+                          </FieldLabel>
+                          <Input
+                            {...controllerField}
+                            id={controllerField.name}
+                            aria-invalid={fieldState.invalid}
+                            placeholder={t("criticalMeds.anticoagulants.namePlaceholder")}
+                            className="h-8"
+                          />
+                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                        </Field>
+                      )}
+                    />
+
+                    <Controller
+                      name={`criticalMedications.anticoagulants.${index}.lastDoseAt`}
+                      control={control}
+                      render={({ field: controllerField, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel htmlFor={controllerField.name} className="text-xs">
+                            {t("criticalMeds.anticoagulants.lastDose")}
+                          </FieldLabel>
+                          <Input
+                            {...controllerField}
+                            id={controllerField.name}
+                            type="datetime-local"
+                            aria-invalid={fieldState.invalid}
+                            className="h-8"
+                          />
+                          <FieldDescription className="text-xs">
+                            {t("criticalMeds.anticoagulants.lastDoseHint")}
+                          </FieldDescription>
+                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                        </Field>
+                      )}
+                    />
+
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => removeAnticoagulant(index)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span className="sr-only">{t("criticalMeds.remove")}</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </FieldGroup>
+        </div>
+
+        {/* Antidiabetics Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Syringe className="size-3.5 text-blue-500" />
+              <span className="text-sm font-medium">{t("criticalMeds.antidiabetics.title")}</span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleAddAntidiabetic("oral")}
+              >
+                <Pill className="mr-1.5 size-3.5" />
+                {t("criticalMeds.antidiabetics.addOral")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleAddAntidiabetic("insulin")}
+              >
+                <Syringe className="mr-1.5 size-3.5" />
+                {t("criticalMeds.antidiabetics.addInsulin")}
+              </Button>
+            </div>
+          </div>
+
+          <FieldGroup className="gap-2">
+            {antidiabeticFields.length === 0 ? (
+              <Card className="border-dashed border-blue-200 bg-blue-50/30">
+                <CardContent className="flex flex-col items-center justify-center py-4 text-center">
+                  <p className="text-xs text-muted-foreground">{t("criticalMeds.antidiabetics.empty")}</p>
+                </CardContent>
+              </Card>
+            ) : (
+              antidiabeticFields.map((field, index) => (
+                <Card key={field.id} className={field.type === "insulin" ? "border-purple-200 bg-purple-50/20" : "border-blue-200 bg-blue-50/20"}>
+                  <CardContent className="grid gap-3 p-3 sm:grid-cols-4">
+                    <div className="flex items-center">
+                      <Badge variant={field.type === "insulin" ? "default" : "secondary"} className="gap-1">
+                        {field.type === "insulin" ? <Syringe className="size-3" /> : <Pill className="size-3" />}
+                        {t(`criticalMeds.antidiabetics.types.${field.type}`)}
+                      </Badge>
+                    </div>
+
+                    <Controller
+                      name={`criticalMedications.antidiabetics.${index}.name`}
+                      control={control}
+                      render={({ field: controllerField, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel htmlFor={controllerField.name} className="text-xs">
+                            {t("criticalMeds.antidiabetics.name")}
+                          </FieldLabel>
+                          <Input
+                            {...controllerField}
+                            id={controllerField.name}
+                            aria-invalid={fieldState.invalid}
+                            placeholder={t("criticalMeds.antidiabetics.namePlaceholder")}
+                            className="h-8"
+                          />
+                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                        </Field>
+                      )}
+                    />
+
+                    <Controller
+                      name={`criticalMedications.antidiabetics.${index}.lastDoseAt`}
+                      control={control}
+                      render={({ field: controllerField, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel htmlFor={controllerField.name} className="text-xs">
+                            {t("criticalMeds.antidiabetics.lastDose")}
+                          </FieldLabel>
+                          <Input
+                            {...controllerField}
+                            id={controllerField.name}
+                            type="datetime-local"
+                            aria-invalid={fieldState.invalid}
+                            className="h-8"
+                          />
+                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                        </Field>
+                      )}
+                    />
+
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => removeAntidiabetic(index)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span className="sr-only">{t("criticalMeds.remove")}</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </FieldGroup>
+        </div>
+      </FieldSet>
+
+      <hr className="border-dashed" />
+
       <FieldSet>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

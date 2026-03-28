@@ -337,6 +337,131 @@ export const defaultClinicalRules: ClinicalRule[] = [
       message: "Pnömonektomi planlanıyor: Kapsamlı kardiyak değerlendirme ve DLCO ölçümü gerekli.",
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRITICAL MEDICATIONS - PREOPERATIVE PROTOCOLS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    id: "warn-anticoagulant-preop",
+    name: "Antikoagülan - Preoperatif Yönetim",
+    description: "Kan sulandırıcı kullanan hastada cerrahi öncesi köprüleme protokolü",
+    enabled: true,
+    condition: {
+      type: "arrayLength",
+      field: "criticalMedications.anticoagulants",
+      operator: "gt",
+      value: 0,
+    },
+    action: {
+      type: "warn",
+      id: "anticoagulant-preop-warn",
+      message: "Kan sulandırıcı kullanımı mevcut. Cerrahi öncesi kesilme süresi (köprüleme) ve güncel INR/Kanama profili teyit edilmeli.",
+    },
+  },
+
+  {
+    id: "req-oral-antidiabetic-protocol",
+    name: "Oral Antidiyabetik - Cerrahi Sabahı Protokolü",
+    description: "Oral antidiyabetik kullanan hastada cerrahi sabahı ilacın atlanması gerekir",
+    enabled: true,
+    condition: {
+      type: "arraySome",
+      field: "criticalMedications.antidiabetics",
+      itemCondition: {
+        itemField: "type",
+        operator: "equals",
+        value: "oral",
+      },
+    },
+    action: {
+      type: "require",
+      id: "oral-antidiabetic-morning-skip",
+      message: "Oral antidiyabetik kullanımı mevcut. Cerrahi sabahı ilacın atlanması ve pre-op kan şekeri takibi planlanmalı.",
+    },
+  },
+
+  {
+    id: "warn-insulin-dependent",
+    name: "İnsülin Bağımlı Diyabet - Hiperglisemi Riski",
+    description: "İnsülin kullanan hastada cerrahi stres hiperglisemi riski",
+    enabled: true,
+    condition: {
+      type: "arraySome",
+      field: "criticalMedications.antidiabetics",
+      itemCondition: {
+        itemField: "type",
+        operator: "equals",
+        value: "insulin",
+      },
+    },
+    action: {
+      type: "warn",
+      id: "insulin-hyperglycemia-warn",
+      message: "İnsülin bağımlı diyabet. Cerrahi stresine bağlı hiperglisemi riski; KİBA (Kısa Etkili İnsülin) infüzyon protokolü gerekebilir.",
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ONCOLOGY HISTORY - SURGICAL RISK ASSESSMENT
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    id: "warn-chemotherapy-history",
+    name: "Kemoterapi Öyküsü - Hematolojik Risk",
+    description: "Kemoterapi almış hastada nötropeni/trombositopeni ve yara iyileşmesi riski",
+    enabled: true,
+    condition: {
+      type: "equals",
+      field: "oncologyHistory.chemotherapy.received",
+      value: true,
+    },
+    action: {
+      type: "warn",
+      id: "chemotherapy-hematologic-warn",
+      message: "Kemoterapi öyküsü mevcut. Pre-op hemogram (nötropeni/trombositopeni açısından) kontrol edilmeli ve yara iyileşmesi gecikmesi riski göz önünde bulundurulmalı.",
+    },
+  },
+
+  {
+    id: "warn-radiotherapy-thoracic",
+    name: "Radyoterapi Öyküsü - Toraks Cerrahisi Riski",
+    description: "Radyoterapi almış hastada toraks cerrahisinde diseksiyon zorluğu ve fistül riski",
+    enabled: true,
+    condition: {
+      type: "equals",
+      field: "oncologyHistory.radiotherapy.received",
+      value: true,
+    },
+    action: {
+      type: "warn",
+      id: "radiotherapy-thoracic-warn",
+      message: "Radyoterapi öyküsü mevcut. Toraks cerrahisinde diseksiyon zorluğu ve bronş güdüğü iyileşme problemi (fistül riski) açısından değerlendirilmeli.",
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SMOKING HISTORY - THORACIC SURGERY SPECIFIC
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    id: "req-smoking-physiotherapy",
+    name: "Sigara Öyküsü - Solunum Fizyoterapisi",
+    description: "Aktif sigara içicisi veya yüksek paket/yıl öyküsü olan hastada preoperatif solunum fizyoterapisi",
+    enabled: true,
+    condition: {
+      operator: "OR",
+      conditions: [
+        { type: "equals", field: "anamnesis.smoking.status", value: "active" },
+        { type: "greaterThan", field: "anamnesis.smoking.packYears", value: 19 },
+      ],
+    },
+    action: {
+      type: "require",
+      id: "smoking-respiratory-physio",
+      message: "Aktif sigara içicisi veya yüksek paket/yıl öyküsü (≥20). Post-op atelektazi ve sekresyon retansiyonu riski yüksek. Pre-op triflo (solunum fizyoterapisi) başlanmalı.",
+    },
+  },
 ]
 
 /**

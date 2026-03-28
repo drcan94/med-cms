@@ -54,22 +54,46 @@ export const vitalsSchema = z.object({
   recordedAt: z.string(),
 })
 
+export const smokingHistorySchema = z.object({
+  status: z.enum(["active", "former", "never"]),
+  packYears: z.number().min(0).optional(),
+})
+
 export const anamnesisSchema = z.object({
   chiefComplaint: z.string().min(1, "Chief complaint is required"),
   historyOfPresentIllness: z.string(),
   knownDiseases: z.array(z.string()),
   pastSurgeries: z.array(z.string()),
-  allergies: z.array(z.string()),
+  allergies: z.array(z.string()).optional(),
+  regularMedications: z.array(z.string()).optional(),
+  smoking: smokingHistorySchema.optional(),
 })
 
-export const medicationEntrySchema = z.object({
+export const oncologyTreatmentSchema = z.object({
+  received: z.boolean(),
+  lastSessionAt: z.string().optional(),
+  details: z.string().optional(),
+})
+
+export const oncologyHistorySchema = z.object({
+  chemotherapy: oncologyTreatmentSchema.optional(),
+  radiotherapy: oncologyTreatmentSchema.optional(),
+})
+
+export const anticoagulantEntrySchema = z.object({
+  name: z.string().min(1, "Medication name is required"),
+  lastDoseAt: z.string(),
+})
+
+export const antidiabeticEntrySchema = z.object({
+  type: z.enum(["oral", "insulin"]),
   name: z.string().min(1, "Medication name is required"),
   lastDoseAt: z.string(),
 })
 
 export const criticalMedicationSchema = z.object({
-  anticoagulants: z.array(medicationEntrySchema),
-  antidiabetics: z.array(medicationEntrySchema),
+  anticoagulants: z.array(anticoagulantEntrySchema).optional(),
+  antidiabetics: z.array(antidiabeticEntrySchema).optional(),
 })
 
 export const dailyDrainageEntrySchema = z.object({
@@ -179,9 +203,11 @@ export const patientFormSchema = z.object({
   procedureName: z.string().optional(),
   gender: z.enum(["male", "female"]).optional(),
   isPregnant: z.boolean().optional(),
+  version: z.number().optional(),
   anamnesis: anamnesisSchema.optional(),
   vitals: vitalsSchema.optional(),
   criticalMedications: criticalMedicationSchema.optional(),
+  oncologyHistory: oncologyHistorySchema.optional(),
   reports: reportsSchema.optional(),
   externalWard: externalWardSchema.optional(),
   thoracicInterventions: z.array(thoracicInterventionSchema).optional(),
@@ -195,7 +221,12 @@ export type PatientFormData = z.infer<typeof patientFormSchema>
 export type ThoracicIntervention = z.infer<typeof thoracicInterventionSchema>
 export type Vitals = z.infer<typeof vitalsSchema>
 export type Anamnesis = z.infer<typeof anamnesisSchema>
+export type SmokingHistory = z.infer<typeof smokingHistorySchema>
 export type CriticalMedication = z.infer<typeof criticalMedicationSchema>
+export type AnticoagulantEntry = z.infer<typeof anticoagulantEntrySchema>
+export type AntidiabeticEntry = z.infer<typeof antidiabeticEntrySchema>
+export type OncologyHistory = z.infer<typeof oncologyHistorySchema>
+export type OncologyTreatment = z.infer<typeof oncologyTreatmentSchema>
 export type LabCulture = z.infer<typeof labCultureSchema>
 export type Consultation = z.infer<typeof consultationSchema>
 export type Antibiotic = z.infer<typeof antibioticSchema>

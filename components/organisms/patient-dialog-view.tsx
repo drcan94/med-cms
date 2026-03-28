@@ -1,12 +1,17 @@
 "use client"
 
 import { useMemo } from "react"
-import { useQuery } from "convex/react"
+import { useAuth } from "@clerk/nextjs"
+import { useMutation, useQuery } from "convex/react"
 import {
   Activity,
   AlertCircle,
+  Archive,
   Beaker,
   Calendar,
+  ChevronDown,
+  Cigarette,
+  CigaretteOff,
   ClipboardList,
   Droplets,
   FileText,
@@ -23,6 +28,7 @@ import {
   X,
 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { toast } from "sonner"
 
 import { api } from "@/convex/_generated/api"
 import type { Doc } from "@/convex/_generated/dataModel"
@@ -40,6 +46,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 
 type PatientRecord = Doc<"patients">
@@ -50,6 +64,20 @@ type Antibiotic = NonNullable<PatientRecord["antibiotics"]>[number]
 type LabCulture = NonNullable<PatientRecord["labCultures"]>[number]
 type Consultation = NonNullable<PatientRecord["consultations"]>[number]
 type CriticalMedications = NonNullable<PatientRecord["criticalMedications"]>
+
+type PatientStatus = "active" | "discharged" | "transferred" | "deceased" | "on_leave"
+
+const PATIENT_STATUS_OPTIONS: {
+  value: PatientStatus
+  labelKey: string
+  variant: "default" | "secondary" | "destructive" | "outline"
+}[] = [
+  { value: "active", labelKey: "active", variant: "default" },
+  { value: "discharged", labelKey: "discharged", variant: "secondary" },
+  { value: "on_leave", labelKey: "onLeave", variant: "outline" },
+  { value: "transferred", labelKey: "transferred", variant: "outline" },
+  { value: "deceased", labelKey: "deceased", variant: "destructive" },
+]
 
 type PatientDialogViewProps = {
   onClose: () => void
@@ -193,6 +221,32 @@ function VitalsCard({ vitals }: Readonly<{ vitals: Vitals }>) {
   )
 }
 
+const SMOKING_STATUS_LABELS: Record<string, { en: string; tr: string; variant: "default" | "secondary" | "destructive" }> = {
+  active: { en: "Active Smoker", tr: "Aktif İçici", variant: "destructive" },
+  former: { en: "Former Smoker", tr: "Bırakmış", variant: "secondary" },
+  never: { en: "Never Smoked", tr: "Kullanmıyor", variant: "default" },
+}
+
+function SmokingHistoryBadge({ smoking }: Readonly<{ smoking: NonNullable<Anamnesis["smoking"]> }>) {
+  const statusInfo = SMOKING_STATUS_LABELS[smoking.status] ?? SMOKING_STATUS_LABELS.never
+  const hasPackYears = smoking.packYears !== undefined && smoking.packYears > 0
+  const isHighRisk = smoking.status === "active" || (hasPackYears && smoking.packYears! >= 20)
+
+  return (
+    <div className="flex items-center gap-2">
+      {smoking.status === "never" ? (
+        <CigaretteOff className="size-4 text-green-600" />
+      ) : (
+        <Cigarette className={`size-4 ${isHighRisk ? "text-red-500" : "text-amber-500"}`} />
+      )}
+      <Badge variant={statusInfo.variant} className="text-xs">
+        {statusInfo.tr}
+        {hasPackYears && ` (${smoking.packYears} Paket/Yıl)`}
+      </Badge>
+    </div>
+  )
+}
+
 function AnamnesisCard({ anamnesis }: Readonly<{ anamnesis: Anamnesis }>) {
   return (
     <Card>
@@ -214,6 +268,13 @@ function AnamnesisCard({ anamnesis }: Readonly<{ anamnesis: Anamnesis }>) {
           <div>
             <p className="text-xs font-medium text-muted-foreground">History of Present Illness</p>
             <p className="whitespace-pre-wrap text-sm">{anamnesis.historyOfPresentIllness}</p>
+          </div>
+        )}
+
+        {anamnesis.smoking && (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Sigara Öyküsü</p>
+            <SmokingHistoryBadge smoking={anamnesis.smoking} />
           </div>
         )}
 
@@ -243,11 +304,11 @@ function AnamnesisCard({ anamnesis }: Readonly<{ anamnesis: Anamnesis }>) {
           </div>
         )}
 
-        {anamnesis.allergies.length > 0 && (
+        {(anamnesis.allergies?.length ?? 0) > 0 && (
           <div>
             <p className="mb-1.5 text-xs font-medium text-muted-foreground">Allergies</p>
             <div className="flex flex-wrap gap-1.5">
-              {anamnesis.allergies.map((allergy) => (
+              {anamnesis.allergies?.map((allergy) => (
                 <Badge key={allergy} variant="destructive" className="text-xs">
                   <AlertCircle className="mr-1 size-3" />
                   {allergy}
@@ -425,8 +486,8 @@ function AntibioticsCard({ antibiotics }: Readonly<{ antibiotics: Antibiotic[] }
 }
 
 function CriticalMedicationsCard({ meds }: Readonly<{ meds: CriticalMedications }>) {
-  const hasAnticoagulants = meds.anticoagulants.length > 0
-  const hasAntidiabetics = meds.antidiabetics.length > 0
+  const hasAnticoagulants = (meds.anticoagulants?.length ?? 0) > 0
+  const hasAntidiabetics = (meds.antidiabetics?.length ?? 0) > 0
 
   if (!hasAnticoagulants && !hasAntidiabetics) return null
 
@@ -443,7 +504,7 @@ function CriticalMedicationsCard({ meds }: Readonly<{ meds: CriticalMedications 
           <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground">Anticoagulants</p>
             <div className="space-y-1.5">
-              {meds.anticoagulants.map((med, idx) => (
+              {meds.anticoagulants?.map((med, idx) => (
                 <div
                   key={idx}
                   className="flex items-center justify-between rounded bg-red-50 px-2 py-1.5 text-sm dark:bg-red-950/30"
@@ -462,7 +523,7 @@ function CriticalMedicationsCard({ meds }: Readonly<{ meds: CriticalMedications 
           <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground">Antidiabetics</p>
             <div className="space-y-1.5">
-              {meds.antidiabetics.map((med, idx) => (
+              {meds.antidiabetics?.map((med, idx) => (
                 <div
                   key={idx}
                   className="flex items-center justify-between rounded bg-orange-50 px-2 py-1.5 text-sm dark:bg-orange-950/30"
@@ -606,7 +667,9 @@ export function PatientDialogView({
 }: Readonly<PatientDialogViewProps>) {
   const t = useTranslations("PatientSheet")
   const tView = useTranslations("PatientDialogView")
+  const { userId } = useAuth()
   const { getFullPatientName } = useLocalRoster()
+  const updatePatientStatus = useMutation(api.patients.updatePatientStatus)
   const clinicSettings = useQuery(
     api.clinicSettings.getClinicSettings,
     open && organizationId ? { organizationId } : "skip"
@@ -656,12 +719,39 @@ export function PatientDialogView({
       clinicalEvaluation.warnings.length > 0 ||
       clinicalEvaluation.requirements.length > 0)
 
+  const handleStatusChange = async (newStatus: PatientStatus) => {
+    if (!patient || !organizationId || !userId) {
+      toast.error(t("toasts.missingContext"))
+      return
+    }
+
+    try {
+      await updatePatientStatus({
+        organizationId,
+        patientId: patient._id,
+        userId,
+        status: newStatus,
+      })
+
+      const statusLabel = tView(`status.${newStatus}`)
+      toast.success(tView("toasts.statusChanged", { status: statusLabel }))
+
+      if (newStatus !== "active") {
+        onClose()
+      }
+    } catch {
+      toast.error(tView("toasts.statusError"))
+    }
+  }
+
   if (!patient) {
     return null
   }
 
   const clinicalDays = calculateClinicalDays(patient.admissionDate, patient.surgeryDate)
   const isStaging = patient.bedId === STAGING_BED_ID
+  const currentStatus = (patient.status ?? "active") as PatientStatus
+  const isArchived = currentStatus !== "active"
 
   return (
     <div className="flex h-full max-h-[90vh] flex-col">
@@ -671,6 +761,12 @@ export function PatientDialogView({
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <Badge variant="secondary">{t("badges.editing")}</Badge>
               <Badge variant="outline">{t("badges.privacy")}</Badge>
+              {isArchived && (
+                <Badge variant="destructive" className="gap-1">
+                  <Archive className="size-3" />
+                  {tView(`status.${currentStatus}`)}
+                </Badge>
+              )}
             </div>
             <DialogTitle className="text-xl">{fullName || patient.initials}</DialogTitle>
             <DialogDescription className="mt-1">
@@ -678,6 +774,28 @@ export function PatientDialogView({
             </DialogDescription>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {tView("statusDropdown.label")}
+                  <ChevronDown className="ml-1.5 size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{tView("statusDropdown.title")}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {PATIENT_STATUS_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => handleStatusChange(option.value)}
+                    className={currentStatus === option.value ? "bg-muted" : ""}
+                  >
+                    {currentStatus === option.value && "✓ "}
+                    {tView(`status.${option.value}`)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="default" size="sm" onClick={onEdit}>
               <Pencil className="mr-1.5 size-3.5" />
               {tView("editButton")}

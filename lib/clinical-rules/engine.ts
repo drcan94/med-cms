@@ -128,6 +128,28 @@ function evaluatePrimitiveCondition(patient: unknown, condition: RuleCondition):
       }
     }
 
+    case "arraySome": {
+      if (!Array.isArray(fieldValue)) {
+        return false
+      }
+      return fieldValue.some((item) => {
+        const itemValue = resolveField(item, condition.itemCondition.itemField)
+        switch (condition.itemCondition.operator) {
+          case "equals":
+            return itemValue === condition.itemCondition.value
+          case "contains":
+            if (typeof itemValue !== "string") {
+              return false
+            }
+            return itemValue
+              .toLowerCase()
+              .includes(String(condition.itemCondition.value).toLowerCase())
+          default:
+            return false
+        }
+      })
+    }
+
     default: {
       const _exhaustiveCheck: never = condition
       return false

@@ -5,12 +5,36 @@ import { v } from "convex/values"
  * All validators are designed for optional use in the patients schema.
  */
 
+export const smokingHistoryValidator = v.object({
+  status: v.union(v.literal("active"), v.literal("former"), v.literal("never")),
+  packYears: v.optional(v.number()),
+})
+
 export const anamnesisValidator = v.object({
   chiefComplaint: v.string(),
   historyOfPresentIllness: v.string(),
   knownDiseases: v.array(v.string()),
   pastSurgeries: v.array(v.string()),
-  allergies: v.array(v.string()),
+  allergies: v.optional(v.array(v.string())),
+  regularMedications: v.optional(v.array(v.string())),
+  smoking: v.optional(smokingHistoryValidator),
+})
+
+export const oncologyHistoryValidator = v.object({
+  chemotherapy: v.optional(
+    v.object({
+      received: v.boolean(),
+      lastSessionAt: v.optional(v.string()),
+      details: v.optional(v.string()),
+    })
+  ),
+  radiotherapy: v.optional(
+    v.object({
+      received: v.boolean(),
+      lastSessionAt: v.optional(v.string()),
+      details: v.optional(v.string()),
+    })
+  ),
 })
 
 export const symptomsValidator = v.object({
@@ -63,17 +87,22 @@ export const vitalsValidator = v.object({
 })
 
 export const criticalMedicationValidator = v.object({
-  anticoagulants: v.array(
-    v.object({
-      name: v.string(),
-      lastDoseAt: v.string(),
-    })
+  anticoagulants: v.optional(
+    v.array(
+      v.object({
+        name: v.string(),
+        lastDoseAt: v.string(),
+      })
+    )
   ),
-  antidiabetics: v.array(
-    v.object({
-      name: v.string(),
-      lastDoseAt: v.string(),
-    })
+  antidiabetics: v.optional(
+    v.array(
+      v.object({
+        type: v.union(v.literal("oral"), v.literal("insulin")),
+        name: v.string(),
+        lastDoseAt: v.string(),
+      })
+    )
   ),
 })
 

@@ -56,9 +56,11 @@ function getDefaultFormValues(patient: PatientRecord | null, fullName: string): 
     procedureName: patient?.procedureName ?? "",
     gender: patient?.gender,
     isPregnant: patient?.isPregnant,
+    version: patient?.version,
     anamnesis: patient?.anamnesis,
     vitals: patient?.vitals,
     criticalMedications: patient?.criticalMedications,
+    oncologyHistory: patient?.oncologyHistory,
     reports: patient?.reports,
     externalWard: patient?.externalWard,
     thoracicInterventions: patient?.thoracicInterventions ?? [],
@@ -213,6 +215,7 @@ export function PatientDialogForm({
         anamnesis: data.anamnesis,
         vitals: data.vitals,
         criticalMedications: data.criticalMedications,
+        oncologyHistory: data.oncologyHistory,
         reports: data.reports,
         externalWard: data.externalWard,
         thoracicInterventions: data.thoracicInterventions,
@@ -235,7 +238,10 @@ export function PatientDialogForm({
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.startsWith("CONFLICT:")) {
-          toast.warning(t("toasts.conflict"))
+          toast.error(t("toasts.conflict"), {
+            duration: 10000,
+            description: t("toasts.conflictDescription"),
+          })
           return
         }
         if (error.message === "TRIAL_LIMIT_REACHED") {
@@ -385,7 +391,11 @@ export function PatientDialogForm({
                 </TabsContent>
 
                 <TabsContent value="meds" className="m-0">
-                  <MedicationsLabsSection control={form.control} />
+                  <MedicationsLabsSection
+                    control={form.control}
+                    setValue={form.setValue}
+                    watch={form.watch}
+                  />
                 </TabsContent>
               </div>
             </Tabs>

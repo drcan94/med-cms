@@ -102,6 +102,7 @@
       "missingContext": "Select a clinic and sign in first.",
       "occupied": "That bed is already occupied.",
       "moveSuccess": "{patientName} moved to {destination}.",
+      "swapSuccess": "{patientA} and {patientB} beds swapped.",
       "moveError": "Unable to move patient.",
       "notFound": "Patient not found.",
       "crossOrganization": "Cannot move patients between clinics."
@@ -196,7 +197,8 @@
       "bedOccupied": "That bed is already assigned.",
       "notFound": "Patient not found.",
       "crossOrganization": "Cannot update patients from other clinics.",
-      "conflict": "Patient was updated by another user. Please refresh."
+      "conflict": "Conflict: Another physician updated this patient",
+      "conflictDescription": "Your changes were not saved. Please refresh the page or back up your changes."
     },
     "clinicalRequirements": {
       "banner": "Required Actions: {items}",
@@ -225,7 +227,22 @@
       "thoracic": "Tubes & Drains",
       "medications": "Medications & Labs"
     },
-    "daysAgo": "{count, plural, one {Day #} other {Day #}}"
+    "daysAgo": "{count, plural, one {Day #} other {Day #}}",
+    "statusDropdown": {
+      "label": "Status",
+      "title": "Change Patient Status"
+    },
+    "status": {
+      "active": "Active (In Ward)",
+      "discharged": "Discharged",
+      "onLeave": "On Leave",
+      "transferred": "Transferred / ICU",
+      "deceased": "Deceased"
+    },
+    "toasts": {
+      "statusChanged": "Patient status changed to {status}.",
+      "statusError": "Unable to update patient status."
+    }
   },
   "PatientFormTabs": {
     "basic": "Basic Info",
@@ -298,7 +315,19 @@
       "pastSurgeriesPlaceholder": "Appendectomy 2015\nCholecystectomy 2018",
       "allergies": "Allergies",
       "allergiesPlaceholder": "Penicillin\nNSAIDs",
-      "onePerLine": "One per line"
+      "regularMedications": "Regular Medications",
+      "regularMedicationsPlaceholder": "Aspirin 100mg\nMetoprolol 50mg",
+      "onePerLine": "One per line",
+      "smoking": {
+        "title": "Smoking History",
+        "status": "Smoking Status",
+        "selectStatus": "Select status",
+        "never": "Never smoked",
+        "former": "Former smoker",
+        "active": "Active smoker",
+        "packYears": "Pack-Years",
+        "packYearsHint": "Packs/day × years smoked"
+      }
     },
     "thoracic": {
       "title": "Thoracic Interventions",
@@ -335,6 +364,8 @@
       "description": "Cultures and biochemistry",
       "addCulture": "Add culture",
       "empty": "No lab cultures recorded.",
+      "cultureTitle": "Culture",
+      "remove": "Remove",
       "type": "Type",
       "types": {
         "blood": "Blood Culture",
@@ -342,7 +373,12 @@
         "sputum": "Sputum Culture",
         "fluid": "Fluid Culture",
         "biochemistry": "Fluid Biochemistry",
-        "cytology": "Cytology"
+        "cytology": "Cytology",
+        "bloodCulture": "Blood Culture",
+        "urineCulture": "Urine Culture",
+        "sputumCulture": "Sputum Culture",
+        "fluidCulture": "Fluid Culture",
+        "fluidBiochemistry": "Fluid Biochemistry"
       },
       "status": "Status",
       "statuses": {
@@ -358,10 +394,56 @@
       "description": "Active and past antibiotics",
       "addAntibiotic": "Add antibiotic",
       "empty": "No antibiotics recorded.",
+      "antibioticTitle": "Antibiotic",
       "name": "Name",
       "namePlaceholder": "Ceftriaxone 1g IV",
       "startedAt": "Started",
-      "stoppedAt": "Stopped"
+      "stoppedAt": "Stopped",
+      "remove": "Remove"
+    },
+    "criticalMeds": {
+      "title": "Critical Medications (Preoperative)",
+      "description": "Medications requiring dose adjustment or discontinuation before surgery. Record the last dose time.",
+      "remove": "Remove",
+      "anticoagulants": {
+        "title": "Blood Thinners",
+        "add": "Add blood thinner",
+        "empty": "No blood thinners recorded.",
+        "name": "Medication name",
+        "namePlaceholder": "Coumadin, Xarelto, Eliquis...",
+        "lastDose": "Last dose time",
+        "lastDoseHint": "Enter date and time"
+      },
+      "antidiabetics": {
+        "title": "Diabetes Medications",
+        "addOral": "Add oral",
+        "addInsulin": "Add insulin",
+        "empty": "No diabetes medications recorded.",
+        "name": "Medication name",
+        "namePlaceholder": "Metformin, Lantus, Novorapid...",
+        "lastDose": "Last dose time",
+        "types": {
+          "oral": "Oral",
+          "insulin": "Insulin"
+        }
+      }
+    },
+    "oncology": {
+      "title": "Oncology History",
+      "description": "Chemotherapy and radiotherapy history",
+      "initialize": "Initialize oncology",
+      "chemotherapy": {
+        "received": "Received chemotherapy",
+        "lastSession": "Last session date",
+        "details": "Details",
+        "detailsPlaceholder": "Protocol, number of cycles, etc."
+      },
+      "radiotherapy": {
+        "received": "Received radiotherapy",
+        "lastSession": "Last session date",
+        "details": "Details",
+        "detailsPlaceholder": "Region, fractions, etc."
+      }
     }
   },
   "SettingsLayout": {

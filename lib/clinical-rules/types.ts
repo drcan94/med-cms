@@ -42,6 +42,16 @@ export type ArrayLengthCondition = {
   value: number
 }
 
+export type ArraySomeCondition = {
+  type: "arraySome"
+  field: string
+  itemCondition: {
+    itemField: string
+    operator: "equals" | "contains"
+    value: string | number | boolean
+  }
+}
+
 export type RuleCondition =
   | ContainsCondition
   | EqualsCondition
@@ -49,6 +59,7 @@ export type RuleCondition =
   | TimeSinceCondition
   | ExistsCondition
   | ArrayLengthCondition
+  | ArraySomeCondition
 
 export type AndCondition = {
   operator: "AND"

@@ -12,6 +12,7 @@ import {
   criticalMedicationValidator,
   externalWardValidator,
   labCultureValidator,
+  oncologyHistoryValidator,
   reportsValidator,
   thoracicInterventionValidator,
   visitNoteValidator,
@@ -48,6 +49,16 @@ export default defineSchema({
     serviceName: v.optional(v.string()),
     /** Optimistic-lock counter for concurrent edit detection (see Phase 10.3). */
     version: v.optional(v.number()),
+    /** Patient lifecycle status for discharge management. Undefined = "active" for backward compatibility. */
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("discharged"),
+        v.literal("transferred"),
+        v.literal("deceased"),
+        v.literal("on_leave")
+      )
+    ),
     /** Completed clinical requirements with completion timestamps. */
     completedRequirements: v.optional(
       v.array(
@@ -79,6 +90,8 @@ export default defineSchema({
     vitals: v.optional(vitalsValidator),
     /** Critical medications requiring close monitoring. */
     criticalMedications: v.optional(criticalMedicationValidator),
+    /** Oncology history (chemotherapy, radiotherapy). */
+    oncologyHistory: v.optional(oncologyHistoryValidator),
     /** Clinical reports (SFT, PET, pathology, etc.). */
     reports: v.optional(reportsValidator),
     /** External ward transfer information. */

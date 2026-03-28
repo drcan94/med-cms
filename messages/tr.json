@@ -102,6 +102,7 @@
       "missingContext": "Önce bir klinik seçin ve giriş yapın.",
       "occupied": "Bu yatak zaten dolu.",
       "moveSuccess": "{patientName} konumu {destination} olarak güncellendi.",
+      "swapSuccess": "{patientA} ve {patientB} yatakları değiştirildi.",
       "moveError": "Hasta taşınamadı.",
       "notFound": "Hasta bulunamadı.",
       "crossOrganization": "Klinikler arası hasta taşınamaz."
@@ -196,7 +197,8 @@
       "bedOccupied": "Bu yatak zaten atanmış.",
       "notFound": "Hasta bulunamadı.",
       "crossOrganization": "Başka kliniklerdeki hastalar güncellenemez.",
-      "conflict": "Hasta başka bir kullanıcı tarafından güncellendi. Lütfen yenileyin."
+      "conflict": "Çakışma: Başka bir hekim bu hastayı güncelledi",
+      "conflictDescription": "Değişiklikleriniz kaydedilmedi. Lütfen sayfayı yenileyin veya değişikliklerinizi yedekleyin."
     },
     "clinicalRequirements": {
       "banner": "Klinik Gereksinimler: {items}",
@@ -225,7 +227,22 @@
       "thoracic": "Tüp ve Drenler",
       "medications": "İlaçlar ve Laboratuvar"
     },
-    "daysAgo": "{count, plural, one {Gün #} other {Gün #}}"
+    "daysAgo": "{count, plural, one {Gün #} other {Gün #}}",
+    "statusDropdown": {
+      "label": "Durum",
+      "title": "Hasta Durumunu Değiştir"
+    },
+    "status": {
+      "active": "Aktif (Serviste)",
+      "discharged": "Taburcu",
+      "onLeave": "İzinli",
+      "transferred": "Devir / Yoğun Bakım",
+      "deceased": "Ex"
+    },
+    "toasts": {
+      "statusChanged": "Hasta durumu {status} olarak güncellendi.",
+      "statusError": "Hasta durumu güncellenemedi."
+    }
   },
   "PatientFormTabs": {
     "basic": "Temel Bilgiler",
@@ -298,7 +315,19 @@
       "pastSurgeriesPlaceholder": "Apendektomi 2015\nKolesistektomi 2018",
       "allergies": "Alerjiler",
       "allergiesPlaceholder": "Penisilin\nNSAİİ",
-      "onePerLine": "Her satıra bir tane"
+      "regularMedications": "Düzenli Kullandığı İlaçlar",
+      "regularMedicationsPlaceholder": "Aspirin 100mg\nMetoprolol 50mg",
+      "onePerLine": "Her satıra bir tane",
+      "smoking": {
+        "title": "Sigara Öyküsü",
+        "status": "Sigara Durumu",
+        "selectStatus": "Durum seçin",
+        "never": "Hiç kullanmadı",
+        "former": "Bırakmış",
+        "active": "Aktif içici",
+        "packYears": "Paket/Yıl",
+        "packYearsHint": "Günlük paket × yıl"
+      }
     },
     "thoracic": {
       "title": "Torasik Girişimler",
@@ -335,6 +364,8 @@
       "description": "Kültürler ve biyokimya",
       "addCulture": "Kültür ekle",
       "empty": "Laboratuvar kültürü kaydı yok.",
+      "cultureTitle": "Kültür",
+      "remove": "Kaldır",
       "type": "Tür",
       "types": {
         "blood": "Kan Kültürü",
@@ -342,7 +373,12 @@
         "sputum": "Balgam Kültürü",
         "fluid": "Sıvı Kültürü",
         "biochemistry": "Sıvı Biyokimyası",
-        "cytology": "Sitoloji"
+        "cytology": "Sitoloji",
+        "bloodCulture": "Kan Kültürü",
+        "urineCulture": "İdrar Kültürü",
+        "sputumCulture": "Balgam Kültürü",
+        "fluidCulture": "Sıvı Kültürü",
+        "fluidBiochemistry": "Sıvı Biyokimyası"
       },
       "status": "Durum",
       "statuses": {
@@ -358,10 +394,56 @@
       "description": "Aktif ve geçmiş antibiyotikler",
       "addAntibiotic": "Antibiyotik ekle",
       "empty": "Antibiyotik kaydı yok.",
+      "antibioticTitle": "Antibiyotik",
       "name": "İsim",
       "namePlaceholder": "Seftriakson 1g IV",
       "startedAt": "Başlangıç",
-      "stoppedAt": "Bitiş"
+      "stoppedAt": "Bitiş",
+      "remove": "Kaldır"
+    },
+    "criticalMeds": {
+      "title": "Kritik İlaçlar (Preoperatif)",
+      "description": "Ameliyat öncesi kesilmesi veya ayarlanması gereken ilaçlar. Son doz zamanını kaydedin.",
+      "remove": "Kaldır",
+      "anticoagulants": {
+        "title": "Kan Sulandırıcılar",
+        "add": "Kan sulandırıcı ekle",
+        "empty": "Kan sulandırıcı kaydı yok.",
+        "name": "İlaç adı",
+        "namePlaceholder": "Coumadin, Xarelto, Eliquis...",
+        "lastDose": "Son doz zamanı",
+        "lastDoseHint": "Tarih ve saat girin"
+      },
+      "antidiabetics": {
+        "title": "Diyabet İlaçları",
+        "addOral": "Oral ekle",
+        "addInsulin": "İnsülin ekle",
+        "empty": "Diyabet ilacı kaydı yok.",
+        "name": "İlaç adı",
+        "namePlaceholder": "Metformin, Lantus, Novorapid...",
+        "lastDose": "Son doz zamanı",
+        "types": {
+          "oral": "Oral",
+          "insulin": "İnsülin"
+        }
+      }
+    },
+    "oncology": {
+      "title": "Onkoloji Öyküsü",
+      "description": "Kemoterapi ve radyoterapi geçmişi",
+      "initialize": "Onkoloji başlat",
+      "chemotherapy": {
+        "received": "Kemoterapi aldı",
+        "lastSession": "Son seans tarihi",
+        "details": "Detaylar",
+        "detailsPlaceholder": "Protokol, kürsayısı vb."
+      },
+      "radiotherapy": {
+        "received": "Radyoterapi aldı",
+        "lastSession": "Son seans tarihi",
+        "details": "Detaylar",
+        "detailsPlaceholder": "Bölge, fraksiyon vb."
+      }
     }
   },
   "SettingsLayout": {

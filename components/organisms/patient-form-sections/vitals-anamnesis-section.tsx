@@ -1,9 +1,11 @@
 "use client"
 
 import { Controller, type Control, type UseFormSetValue, type UseFormWatch } from "react-hook-form"
+import { Activity, Cigarette, Radiation } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 import type { PatientFormData } from "@/lib/schemas/patient-form.schema"
+import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Field,
@@ -15,6 +17,13 @@ import {
   FieldSet,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
 type SymptomKey =
@@ -113,9 +122,24 @@ export function VitalsAnamnesisSection({
         knownDiseases: [],
         pastSurgeries: [],
         allergies: [],
+        regularMedications: [],
       })
     }
   }
+
+  const initializeOncologyHistory = () => {
+    const currentOncology = watch("oncologyHistory")
+    if (!currentOncology) {
+      setValue("oncologyHistory", {
+        chemotherapy: { received: false },
+        radiotherapy: { received: false },
+      })
+    }
+  }
+
+  const watchChemotherapy = watch("oncologyHistory.chemotherapy.received")
+  const watchRadiotherapy = watch("oncologyHistory.radiotherapy.received")
+  const watchSmokingStatus = watch("anamnesis.smoking.status")
 
   return (
     <div className="space-y-6">
@@ -388,6 +412,254 @@ export function VitalsAnamnesisSection({
                 </Field>
               )}
             />
+          </div>
+
+          <Controller
+            name="anamnesis.regularMedications"
+            control={control}
+            render={({ field }) => (
+              <Field>
+                <FieldLabel htmlFor={field.name} className="text-xs">
+                  {t("anamnesis.regularMedications")}
+                </FieldLabel>
+                <Textarea
+                  id={field.name}
+                  value={field.value?.join("\n") ?? ""}
+                  onChange={(e) => field.onChange(e.target.value.split("\n").filter(Boolean))}
+                  placeholder={t("anamnesis.regularMedicationsPlaceholder")}
+                  className="min-h-[80px] resize-none text-xs"
+                />
+                <FieldDescription className="text-xs">
+                  {t("anamnesis.onePerLine")}
+                </FieldDescription>
+              </Field>
+            )}
+          />
+
+          {/* Smoking History Section */}
+          <Card className="border-amber-200 bg-amber-50/30 dark:border-amber-900 dark:bg-amber-950/20">
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-center gap-2">
+                <Cigarette className="size-4 text-amber-600" />
+                <span className="text-sm font-medium">{t("anamnesis.smoking.title")}</span>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Controller
+                  name="anamnesis.smoking.status"
+                  control={control}
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor={field.name} className="text-xs">
+                        {t("anamnesis.smoking.status")}
+                      </FieldLabel>
+                      <Select
+                        value={field.value ?? ""}
+                        onValueChange={(value) => {
+                          field.onChange(value)
+                          if (value === "never") {
+                            setValue("anamnesis.smoking.packYears", undefined)
+                          }
+                        }}
+                      >
+                        <SelectTrigger id={field.name} className="h-9">
+                          <SelectValue placeholder={t("anamnesis.smoking.selectStatus")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="never">{t("anamnesis.smoking.never")}</SelectItem>
+                          <SelectItem value="former">{t("anamnesis.smoking.former")}</SelectItem>
+                          <SelectItem value="active">{t("anamnesis.smoking.active")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  )}
+                />
+
+                {(watchSmokingStatus === "active" || watchSmokingStatus === "former") && (
+                  <Controller
+                    name="anamnesis.smoking.packYears"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor={field.name} className="text-xs">
+                          {t("anamnesis.smoking.packYears")}
+                        </FieldLabel>
+                        <Input
+                          {...field}
+                          id={field.name}
+                          type="number"
+                          min="0"
+                          step="1"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="20"
+                          className="h-9"
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(e.target.value ? Number(e.target.value) : undefined)
+                          }
+                        />
+                        <FieldDescription className="text-xs">
+                          {t("anamnesis.smoking.packYearsHint")}
+                        </FieldDescription>
+                        {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                      </Field>
+                    )}
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </FieldGroup>
+      </FieldSet>
+
+      <hr className="border-dashed" />
+
+      {/* Oncology History Section */}
+      <FieldSet>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Radiation className="size-4 text-orange-500" />
+            <FieldLegend variant="label">{t("oncology.title")}</FieldLegend>
+          </div>
+          <button
+            type="button"
+            onClick={initializeOncologyHistory}
+            className="text-xs text-primary hover:underline"
+          >
+            {t("oncology.initialize")}
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">{t("oncology.description")}</p>
+
+        <FieldGroup className="gap-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Chemotherapy Card */}
+            <Card className="border-orange-200 bg-orange-50/30">
+              <CardContent className="space-y-3 p-4">
+                <Controller
+                  name="oncologyHistory.chemotherapy.received"
+                  control={control}
+                  render={({ field }) => (
+                    <Field orientation="horizontal">
+                      <Checkbox
+                        id={field.name}
+                        name={field.name}
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                      <FieldLabel htmlFor={field.name} className="text-sm font-medium">
+                        <Activity className="mr-1.5 inline size-3.5" />
+                        {t("oncology.chemotherapy.received")}
+                      </FieldLabel>
+                    </Field>
+                  )}
+                />
+
+                {watchChemotherapy && (
+                  <>
+                    <Controller
+                      name="oncologyHistory.chemotherapy.lastSessionAt"
+                      control={control}
+                      render={({ field }) => (
+                        <Field>
+                          <FieldLabel htmlFor={field.name} className="text-xs">
+                            {t("oncology.chemotherapy.lastSession")}
+                          </FieldLabel>
+                          <Input
+                            {...field}
+                            id={field.name}
+                            type="date"
+                            className="h-8"
+                          />
+                        </Field>
+                      )}
+                    />
+
+                    <Controller
+                      name="oncologyHistory.chemotherapy.details"
+                      control={control}
+                      render={({ field }) => (
+                        <Field>
+                          <FieldLabel htmlFor={field.name} className="text-xs">
+                            {t("oncology.chemotherapy.details")}
+                          </FieldLabel>
+                          <Textarea
+                            {...field}
+                            id={field.name}
+                            placeholder={t("oncology.chemotherapy.detailsPlaceholder")}
+                            className="min-h-[60px] resize-none text-xs"
+                          />
+                        </Field>
+                      )}
+                    />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Radiotherapy Card */}
+            <Card className="border-purple-200 bg-purple-50/30">
+              <CardContent className="space-y-3 p-4">
+                <Controller
+                  name="oncologyHistory.radiotherapy.received"
+                  control={control}
+                  render={({ field }) => (
+                    <Field orientation="horizontal">
+                      <Checkbox
+                        id={field.name}
+                        name={field.name}
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                      <FieldLabel htmlFor={field.name} className="text-sm font-medium">
+                        <Radiation className="mr-1.5 inline size-3.5" />
+                        {t("oncology.radiotherapy.received")}
+                      </FieldLabel>
+                    </Field>
+                  )}
+                />
+
+                {watchRadiotherapy && (
+                  <>
+                    <Controller
+                      name="oncologyHistory.radiotherapy.lastSessionAt"
+                      control={control}
+                      render={({ field }) => (
+                        <Field>
+                          <FieldLabel htmlFor={field.name} className="text-xs">
+                            {t("oncology.radiotherapy.lastSession")}
+                          </FieldLabel>
+                          <Input
+                            {...field}
+                            id={field.name}
+                            type="date"
+                            className="h-8"
+                          />
+                        </Field>
+                      )}
+                    />
+
+                    <Controller
+                      name="oncologyHistory.radiotherapy.details"
+                      control={control}
+                      render={({ field }) => (
+                        <Field>
+                          <FieldLabel htmlFor={field.name} className="text-xs">
+                            {t("oncology.radiotherapy.details")}
+                          </FieldLabel>
+                          <Textarea
+                            {...field}
+                            id={field.name}
+                            placeholder={t("oncology.radiotherapy.detailsPlaceholder")}
+                            className="min-h-[60px] resize-none text-xs"
+                          />
+                        </Field>
+                      )}
+                    />
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </FieldGroup>
       </FieldSet>

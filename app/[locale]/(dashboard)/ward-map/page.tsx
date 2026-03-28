@@ -108,47 +108,67 @@ export default function WardMapPage() {
       return
     }
 
-    if (
-      displayPatients.some(
-        (record) =>
-          record._id !== patient._id &&
-          record.bedId === destinationBedId &&
-          bedIds.has(record.bedId)
-      )
-    ) {
-      toast.error(t("toasts.occupied"))
-      return
+    const sourceBedId = patient.bedId
+
+    const occupyingPatient =
+      destinationBedId !== "STAGING"
+        ? displayPatients.find(
+            (record) =>
+              record._id !== patient._id &&
+              record.bedId === destinationBedId &&
+              bedIds.has(record.bedId)
+          )
+        : null
+
+    if (occupyingPatient) {
+      setOptimisticBedIds((currentBedIds) => ({
+        ...currentBedIds,
+        [patient._id]: destinationBedId,
+        [occupyingPatient._id]: sourceBedId,
+      }))
+    } else {
+      setOptimisticBedIds((currentBedIds) => ({
+        ...currentBedIds,
+        [patient._id]: destinationBedId,
+      }))
     }
 
-    const previousBedId = patient.bedId
-
-    setOptimisticBedIds((currentBedIds) => ({
-      ...currentBedIds,
-      [patient._id]: destinationBedId,
-    }))
-
     try {
-      await updatePatientBed({
+      const result = await updatePatientBed({
         newBedId: destinationBedId,
         organizationId: orgId,
         patientId: patient._id,
         userId,
       })
 
-      toast.success(
-        t("toasts.moveSuccess", {
-          patientName: formatPatientToastName(
-            getPatientName(patient),
-            patient.initials
-          ),
-          destination: getWardMapBedDisplayLabel(destinationBedId, bedMetadata, t),
-        })
-      )
+      if (result.swappedPatientId && occupyingPatient) {
+        toast.success(
+          t("toasts.swapSuccess", {
+            patientA: formatPatientToastName(getPatientName(patient), patient.initials),
+            patientB: formatPatientToastName(getPatientName(occupyingPatient), occupyingPatient.initials),
+          })
+        )
+      } else {
+        toast.success(
+          t("toasts.moveSuccess", {
+            patientName: formatPatientToastName(getPatientName(patient), patient.initials),
+            destination: getWardMapBedDisplayLabel(destinationBedId, bedMetadata, t),
+          })
+        )
+      }
     } catch (error) {
-      setOptimisticBedIds((currentBedIds) => ({
-        ...currentBedIds,
-        [patient._id]: previousBedId,
-      }))
+      if (occupyingPatient) {
+        setOptimisticBedIds((currentBedIds) => ({
+          ...currentBedIds,
+          [patient._id]: sourceBedId,
+          [occupyingPatient._id]: destinationBedId,
+        }))
+      } else {
+        setOptimisticBedIds((currentBedIds) => ({
+          ...currentBedIds,
+          [patient._id]: sourceBedId,
+        }))
+      }
       toast.error(resolveWardMapErrorMessage(error, t))
     }
   }

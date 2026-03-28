@@ -14,6 +14,7 @@ import {
   criticalMedicationValidator,
   externalWardValidator,
   labCultureValidator,
+  oncologyHistoryValidator,
   reportsValidator,
   thoracicInterventionValidator,
   visitNoteValidator,
@@ -24,6 +25,16 @@ import { requireText, sanitizePatientFields } from "./patientValidators"
 export const getPatientsByOrganization = query({
   args: {
     organizationId: v.string(),
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("discharged"),
+        v.literal("transferred"),
+        v.literal("deceased"),
+        v.literal("on_leave"),
+        v.literal("all")
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const patients = await ctx.db
@@ -33,7 +44,17 @@ export const getPatientsByOrganization = query({
       )
       .collect()
 
-    return patients.sort((leftPatient, rightPatient) =>
+    const filteredPatients =
+      args.status === "all"
+        ? patients
+        : patients.filter((patient) => {
+            if (args.status) {
+              return patient.status === args.status
+            }
+            return patient.status === "active" || patient.status === undefined
+          })
+
+    return filteredPatients.sort((leftPatient, rightPatient) =>
       leftPatient.bedId.localeCompare(rightPatient.bedId, undefined, {
         numeric: true,
         sensitivity: "base",
@@ -78,6 +99,7 @@ export const upsertPatient = mutation({
     anamnesis: v.optional(anamnesisValidator),
     vitals: v.optional(vitalsValidator),
     criticalMedications: v.optional(criticalMedicationValidator),
+    oncologyHistory: v.optional(oncologyHistoryValidator),
     reports: v.optional(reportsValidator),
     externalWard: v.optional(externalWardValidator),
     thoracicInterventions: v.optional(v.array(thoracicInterventionValidator)),
@@ -94,6 +116,7 @@ export const upsertPatient = mutation({
       anamnesis: args.anamnesis,
       vitals: args.vitals,
       criticalMedications: args.criticalMedications,
+      oncologyHistory: args.oncologyHistory,
       reports: args.reports,
       externalWard: args.externalWard,
       thoracicInterventions: args.thoracicInterventions,
@@ -222,25 +245,35 @@ export const updatePatientBed = mutation({
       throw new Error("You cannot move a patient outside your organization.")
     }
 
-    const conflictingBedAssignment =
-      newBedId === STAGING_BED_ID
-        ? null
-        : await ctx.db
-            .query("patients")
-            .withIndex("by_organization_bed_id", (queryBuilder) =>
-              queryBuilder.eq("organizationId", organizationId).eq("bedId", newBedId)
-            )
-            .unique()
+    const sourceBedId = patient.bedId
+    let swappedPatientId: string | null = null
+    let action = `patient.moved:${newBedId}`
 
-    if (conflictingBedAssignment && conflictingBedAssignment._id !== args.patientId) {
-      throw new Error("That bed is already assigned to another patient.")
+    if (newBedId !== STAGING_BED_ID) {
+      const occupyingPatient = await ctx.db
+        .query("patients")
+        .withIndex("by_organization_bed_id", (queryBuilder) =>
+          queryBuilder.eq("organizationId", organizationId).eq("bedId", newBedId)
+        )
+        .unique()
+
+      if (occupyingPatient && occupyingPatient._id !== args.patientId) {
+        const isActivePatient =
+          occupyingPatient.status === "active" || occupyingPatient.status === undefined
+
+        if (isActivePatient) {
+          await ctx.db.patch(occupyingPatient._id, {
+            bedId: sourceBedId,
+          })
+          swappedPatientId = occupyingPatient._id
+          action = `patient.swapped:${newBedId}<->${sourceBedId}`
+        }
+      }
     }
 
     await ctx.db.patch(args.patientId, {
       bedId: newBedId,
     })
-
-    const action = `patient.moved:${newBedId}`
 
     await ctx.runMutation(internal.audit.recordAuditLog, {
       action,
@@ -252,6 +285,64 @@ export const updatePatientBed = mutation({
     return {
       action,
       patientId: args.patientId,
+      swappedPatientId,
+    }
+  },
+})
+
+export const updatePatientStatus = mutation({
+  args: {
+    organizationId: v.string(),
+    patientId: v.id("patients"),
+    userId: v.string(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("discharged"),
+      v.literal("transferred"),
+      v.literal("deceased"),
+      v.literal("on_leave")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const organizationId = requireText(args.organizationId, "Organization")
+    const userId = requireText(args.userId, "User")
+    const patient = await ctx.db.get(args.patientId)
+
+    if (!patient) {
+      throw new Error("Patient record not found.")
+    }
+
+    if (patient.organizationId !== organizationId) {
+      throw new Error("You cannot update a patient outside your organization.")
+    }
+
+    const previousStatus = patient.status ?? "active"
+    const isLeavingWard = args.status !== "active"
+
+    const updatePayload: { status: typeof args.status; bedId?: string } = {
+      status: args.status,
+    }
+
+    if (isLeavingWard && patient.bedId !== STAGING_BED_ID) {
+      updatePayload.bedId = STAGING_BED_ID
+    }
+
+    await ctx.db.patch(args.patientId, updatePayload)
+
+    const action = `patient.status:${previousStatus}->${args.status}`
+
+    await ctx.runMutation(internal.audit.recordAuditLog, {
+      action,
+      organizationId,
+      timestamp: Date.now(),
+      userId,
+    })
+
+    return {
+      action,
+      patientId: args.patientId,
+      previousStatus,
+      newStatus: args.status,
     }
   },
 })

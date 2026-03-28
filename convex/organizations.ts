@@ -90,6 +90,9 @@ export const upsertOrganizationFromClerkWebhook = internalMutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
+    console.log("[CONVEX DB] 🏢 upsertOrganizationFromClerkWebhook called")
+    console.log("[CONVEX DB] 🏢 Args:", JSON.stringify(args))
+
     const clerkId = requireText(args.clerkId, "Organization")
     const name = requireText(args.name, "Organization name")
     const existingOrganization = await ctx.db
@@ -98,10 +101,12 @@ export const upsertOrganizationFromClerkWebhook = internalMutation({
       .unique()
 
     if (existingOrganization) {
+      console.log("[CONVEX DB] 🔄 Organization exists, updating:", existingOrganization._id)
       await ctx.db.patch(existingOrganization._id, {
         name,
       })
 
+      console.log("[CONVEX DB] ✅ Organization UPDATED successfully")
       return {
         clerkId,
         name,
@@ -111,12 +116,14 @@ export const upsertOrganizationFromClerkWebhook = internalMutation({
       }
     }
 
+    console.log("[CONVEX DB] ➕ Organization does not exist, creating new...")
     await ctx.db.insert("organizations", {
       clerkId,
       name,
       subscriptionStatus: "trial",
     })
 
+    console.log("[CONVEX DB] ✅ Organization CREATED successfully:", clerkId)
     return {
       clerkId,
       name,
@@ -158,6 +165,9 @@ export const addMembershipFromClerkWebhook = internalMutation({
     role: v.string(),
   },
   handler: async (ctx, args) => {
+    console.log("[CONVEX DB] 🤝 addMembershipFromClerkWebhook called")
+    console.log("[CONVEX DB] 🤝 Args:", JSON.stringify(args))
+
     const organizationId = requireText(args.organizationId, "Organization")
     const userId = requireText(args.userId, "User")
     const role = requireText(args.role, "Role")
@@ -170,20 +180,24 @@ export const addMembershipFromClerkWebhook = internalMutation({
       .unique()
 
     if (existingMembership) {
+      console.log("[CONVEX DB] 🔄 Membership exists, updating:", existingMembership._id)
       await ctx.db.patch(existingMembership._id, { role })
 
+      console.log("[CONVEX DB] ✅ Membership UPDATED successfully")
       return {
         membershipId: existingMembership._id,
         action: "updated",
       }
     }
 
+    console.log("[CONVEX DB] ➕ Membership does not exist, creating new...")
     const membershipId = await ctx.db.insert("organizationMemberships", {
       organizationId,
       userId,
       role,
     })
 
+    console.log("[CONVEX DB] ✅ Membership CREATED successfully:", membershipId)
     return {
       membershipId,
       action: "created",
@@ -197,6 +211,9 @@ export const removeMembershipFromClerkWebhook = internalMutation({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    console.log("[CONVEX DB] ❌ removeMembershipFromClerkWebhook called")
+    console.log("[CONVEX DB] ❌ Args:", JSON.stringify(args))
+
     const organizationId = requireText(args.organizationId, "Organization")
     const userId = requireText(args.userId, "User")
 
@@ -208,11 +225,14 @@ export const removeMembershipFromClerkWebhook = internalMutation({
       .unique()
 
     if (!membership) {
+      console.log("[CONVEX DB] ⚠️ Membership not found for deletion")
       return { action: "not_found" }
     }
 
+    console.log("[CONVEX DB] 🔍 Found membership to delete:", membership._id)
     await ctx.db.delete(membership._id)
 
+    console.log("[CONVEX DB] ✅ Membership DELETED successfully")
     return { action: "deleted" }
   },
 })

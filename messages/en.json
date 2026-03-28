@@ -909,6 +909,10 @@
     "authenticating": "Authenticating...",
     "connecting": "Connecting to workspace...",
     "userSync": "Setting up your account...",
-    "membershipSync": "Verifying clinic access..."
+    "membershipSync": "Verifying clinic access...",
+    "timeoutTitle": "Sync Timeout",
+    "timeoutMessage": "Account synchronization took longer than expected. This is usually caused by a webhook configuration issue. Please refresh the page or sign in again.",
+    "refresh": "Refresh Page",
+    "signOut": "Sign Out"
   }
 }

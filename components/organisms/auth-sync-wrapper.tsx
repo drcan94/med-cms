@@ -1,12 +1,15 @@
 "use client"
 
-import type { ReactNode } from "react"
-import { useAuth } from "@clerk/nextjs"
+import { type ReactNode, useEffect, useRef, useState } from "react"
+import { useAuth, useClerk } from "@clerk/nextjs"
 import { useQuery } from "convex/react"
-import { Loader2, ShieldCheck } from "lucide-react"
+import { AlertTriangle, Loader2, ShieldCheck } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 import { api } from "@/convex/_generated/api"
+import { Button } from "@/components/ui/button"
+
+const SYNC_TIMEOUT_MS = 10_000
 
 type AuthSyncWrapperProps = {
   children: ReactNode
@@ -14,35 +17,86 @@ type AuthSyncWrapperProps = {
 
 export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
   const t = useTranslations("AuthSyncWrapper")
+  const { signOut } = useClerk()
   const { isLoaded: isClerkLoaded, isSignedIn, orgId } = useAuth()
+  const [isTimedOut, setIsTimedOut] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const syncStatus = useQuery(
     api.users.getAuthSyncStatus,
     isClerkLoaded && isSignedIn ? { organizationId: orgId ?? undefined } : "skip"
   )
 
+  const isPending =
+    !isClerkLoaded ||
+    !isSignedIn ||
+    syncStatus === undefined ||
+    syncStatus.status === "unauthenticated" ||
+    syncStatus.status === "user_pending" ||
+    syncStatus.status === "membership_pending"
+
+  useEffect(() => {
+    console.log("[AuthSync] Status:", {
+      isClerkLoaded,
+      isSignedIn,
+      orgId,
+      syncStatus,
+      isPending,
+      isTimedOut,
+    })
+  }, [isClerkLoaded, isSignedIn, orgId, syncStatus, isPending, isTimedOut])
+
+  useEffect(() => {
+    if (!isPending || isTimedOut) {
+      return
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      console.warn("[AuthSync] Timeout reached after 10 seconds")
+      setIsTimedOut(true)
+    }, SYNC_TIMEOUT_MS)
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+    }
+  }, [isPending, isTimedOut])
+
+  const renderErrorState = () => (
+    <SyncErrorState
+      title={t("timeoutTitle")}
+      message={t("timeoutMessage")}
+      onRefresh={() => window.location.reload()}
+      onSignOut={() => signOut()}
+      refreshLabel={t("refresh")}
+      signOutLabel={t("signOut")}
+    />
+  )
+
   if (!isClerkLoaded) {
-    return <SyncLoadingState message={t("loading")} />
+    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("loading")} />
   }
 
   if (!isSignedIn) {
-    return <SyncLoadingState message={t("authenticating")} />
+    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("authenticating")} />
   }
 
   if (syncStatus === undefined) {
-    return <SyncLoadingState message={t("connecting")} />
+    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("connecting")} />
   }
 
   if (syncStatus.status === "unauthenticated") {
-    return <SyncLoadingState message={t("authenticating")} />
+    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("authenticating")} />
   }
 
   if (syncStatus.status === "user_pending") {
-    return <SyncLoadingState message={t("userSync")} />
+    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("userSync")} />
   }
 
   if (syncStatus.status === "membership_pending") {
-    return <SyncLoadingState message={t("membershipSync")} />
+    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("membershipSync")} />
   }
 
   return <>{children}</>
@@ -70,6 +124,46 @@ function SyncLoadingState({ message }: Readonly<{ message: string }>) {
           <span className="size-1.5 animate-pulse rounded-full bg-primary/60 [animation-delay:0ms]" />
           <span className="size-1.5 animate-pulse rounded-full bg-primary/60 [animation-delay:150ms]" />
           <span className="size-1.5 animate-pulse rounded-full bg-primary/60 [animation-delay:300ms]" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type SyncErrorStateProps = {
+  title: string
+  message: string
+  onRefresh: () => void
+  onSignOut: () => void
+  refreshLabel: string
+  signOutLabel: string
+}
+
+function SyncErrorState({
+  title,
+  message,
+  onRefresh,
+  onSignOut,
+  refreshLabel,
+  signOutLabel,
+}: Readonly<SyncErrorStateProps>) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-6 text-center">
+        <div className="flex size-16 items-center justify-center rounded-full bg-destructive/10">
+          <AlertTriangle className="size-8 text-destructive" />
+        </div>
+
+        <div className="max-w-sm space-y-2">
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+          <p className="text-sm text-muted-foreground">{message}</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button onClick={onRefresh}>{refreshLabel}</Button>
+          <Button variant="outline" onClick={onSignOut}>
+            {signOutLabel}
+          </Button>
         </div>
       </div>
     </div>

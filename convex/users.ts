@@ -83,12 +83,16 @@ export const upsertUserFromClerkWebhook = internalMutation({
     imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    console.log("[CONVEX DB] 📥 upsertUserFromClerkWebhook called")
+    console.log("[CONVEX DB] 📥 Args:", JSON.stringify(args))
+
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique()
 
     if (existingUser) {
+      console.log("[CONVEX DB] 🔄 User exists, updating:", existingUser._id)
       await ctx.db.patch(existingUser._id, {
         email: args.email,
         firstName: args.firstName,
@@ -96,9 +100,11 @@ export const upsertUserFromClerkWebhook = internalMutation({
         imageUrl: args.imageUrl,
       })
 
+      console.log("[CONVEX DB] ✅ User UPDATED successfully:", existingUser._id)
       return { userId: existingUser._id, action: "updated" }
     }
 
+    console.log("[CONVEX DB] ➕ User does not exist, creating new user...")
     const userId = await ctx.db.insert("users", {
       clerkId: args.clerkId,
       email: args.email,
@@ -107,6 +113,7 @@ export const upsertUserFromClerkWebhook = internalMutation({
       imageUrl: args.imageUrl,
     })
 
+    console.log("[CONVEX DB] ✅ User CREATED successfully:", userId)
     return { userId, action: "created" }
   },
 })
@@ -116,19 +123,26 @@ export const deleteUserFromClerkWebhook = internalMutation({
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
+    console.log("[CONVEX DB] 🗑️ deleteUserFromClerkWebhook called for:", args.clerkId)
+
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique()
 
     if (!user) {
+      console.log("[CONVEX DB] ⚠️ User not found for deletion:", args.clerkId)
       return { action: "not_found" }
     }
+
+    console.log("[CONVEX DB] 🔍 Found user to delete:", user._id)
 
     const memberships = await ctx.db
       .query("organizationMemberships")
       .withIndex("by_user_id", (q) => q.eq("userId", args.clerkId))
       .collect()
+
+    console.log("[CONVEX DB] 🔗 Found", memberships.length, "memberships to delete")
 
     for (const membership of memberships) {
       await ctx.db.delete(membership._id)
@@ -136,6 +150,7 @@ export const deleteUserFromClerkWebhook = internalMutation({
 
     await ctx.db.delete(user._id)
 
+    console.log("[CONVEX DB] ✅ User DELETED successfully:", args.clerkId)
     return { action: "deleted" }
   },
 })

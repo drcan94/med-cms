@@ -909,6 +909,10 @@
     "authenticating": "Kimlik doğrulanıyor...",
     "connecting": "Çalışma alanına bağlanılıyor...",
     "userSync": "Hesabınız hazırlanıyor...",
-    "membershipSync": "Klinik erişimi doğrulanıyor..."
+    "membershipSync": "Klinik erişimi doğrulanıyor...",
+    "timeoutTitle": "Senkronizasyon Zaman Aşımı",
+    "timeoutMessage": "Hesap senkronizasyonu beklenenden uzun sürdü. Bu genellikle bir webhook yapılandırma sorunundan kaynaklanır. Lütfen sayfayı yenileyin veya tekrar giriş yapın.",
+    "refresh": "Sayfayı Yenile",
+    "signOut": "Çıkış Yap"
   }
 }

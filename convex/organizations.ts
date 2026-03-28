@@ -150,3 +150,69 @@ export const updateSubscriptionStatus = internalMutation({
     }
   },
 })
+
+export const addMembershipFromClerkWebhook = internalMutation({
+  args: {
+    organizationId: v.string(),
+    userId: v.string(),
+    role: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const organizationId = requireText(args.organizationId, "Organization")
+    const userId = requireText(args.userId, "User")
+    const role = requireText(args.role, "Role")
+
+    const existingMembership = await ctx.db
+      .query("organizationMemberships")
+      .withIndex("by_org_and_user", (q) =>
+        q.eq("organizationId", organizationId).eq("userId", userId)
+      )
+      .unique()
+
+    if (existingMembership) {
+      await ctx.db.patch(existingMembership._id, { role })
+
+      return {
+        membershipId: existingMembership._id,
+        action: "updated",
+      }
+    }
+
+    const membershipId = await ctx.db.insert("organizationMemberships", {
+      organizationId,
+      userId,
+      role,
+    })
+
+    return {
+      membershipId,
+      action: "created",
+    }
+  },
+})
+
+export const removeMembershipFromClerkWebhook = internalMutation({
+  args: {
+    organizationId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const organizationId = requireText(args.organizationId, "Organization")
+    const userId = requireText(args.userId, "User")
+
+    const membership = await ctx.db
+      .query("organizationMemberships")
+      .withIndex("by_org_and_user", (q) =>
+        q.eq("organizationId", organizationId).eq("userId", userId)
+      )
+      .unique()
+
+    if (!membership) {
+      return { action: "not_found" }
+    }
+
+    await ctx.db.delete(membership._id)
+
+    return { action: "deleted" }
+  },
+})

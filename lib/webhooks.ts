@@ -1,6 +1,4 @@
-import type {
-  WebhookEvent,
-} from "@clerk/nextjs/server"
+import type { WebhookEvent } from "@clerk/nextjs/server"
 import { Webhook } from "svix"
 
 type ClerkOrganizationSyncEvent = Extract<
@@ -8,9 +6,34 @@ type ClerkOrganizationSyncEvent = Extract<
   { type: "organization.created" | "organization.updated" }
 >
 
-const ORGANIZATION_WEBHOOK_TYPES = new Set<
-  "organization.created" | "organization.updated"
->(["organization.created", "organization.updated"])
+type ClerkUserSyncEvent = Extract<
+  WebhookEvent,
+  { type: "user.created" | "user.updated" }
+>
+
+type ClerkUserDeletedEvent = Extract<WebhookEvent, { type: "user.deleted" }>
+
+type ClerkMembershipCreatedEvent = Extract<
+  WebhookEvent,
+  { type: "organizationMembership.created" }
+>
+
+type ClerkMembershipDeletedEvent = Extract<
+  WebhookEvent,
+  { type: "organizationMembership.deleted" }
+>
+
+const ORGANIZATION_WEBHOOK_TYPES = new Set([
+  "organization.created",
+  "organization.updated",
+])
+
+const USER_SYNC_WEBHOOK_TYPES = new Set(["user.created", "user.updated"])
+
+const MEMBERSHIP_WEBHOOK_TYPES = new Set([
+  "organizationMembership.created",
+  "organizationMembership.deleted",
+])
 
 function requireText(
   value: string | null | undefined,
@@ -28,12 +51,36 @@ function requireText(
 export function isClerkOrganizationWebhook(
   event: WebhookEvent
 ): event is ClerkOrganizationSyncEvent {
-  return ORGANIZATION_WEBHOOK_TYPES.has(
-    event.type as "organization.created" | "organization.updated"
-  )
+  return ORGANIZATION_WEBHOOK_TYPES.has(event.type)
 }
 
-export function getClerkOrganizationPayload(event: ClerkOrganizationSyncEvent): {
+export function isClerkUserSyncWebhook(
+  event: WebhookEvent
+): event is ClerkUserSyncEvent {
+  return USER_SYNC_WEBHOOK_TYPES.has(event.type)
+}
+
+export function isClerkUserDeletedWebhook(
+  event: WebhookEvent
+): event is ClerkUserDeletedEvent {
+  return event.type === "user.deleted"
+}
+
+export function isClerkMembershipCreatedWebhook(
+  event: WebhookEvent
+): event is ClerkMembershipCreatedEvent {
+  return event.type === "organizationMembership.created"
+}
+
+export function isClerkMembershipDeletedWebhook(
+  event: WebhookEvent
+): event is ClerkMembershipDeletedEvent {
+  return event.type === "organizationMembership.deleted"
+}
+
+export function getClerkOrganizationPayload(
+  event: ClerkOrganizationSyncEvent
+): {
   clerkId: string
   name: string
 } {
@@ -43,7 +90,69 @@ export function getClerkOrganizationPayload(event: ClerkOrganizationSyncEvent): 
   }
 }
 
-export async function verifyClerkWebhook(request: Request): Promise<WebhookEvent> {
+export function getClerkUserPayload(event: ClerkUserSyncEvent): {
+  clerkId: string
+  email: string
+  firstName: string | undefined
+  lastName: string | undefined
+  imageUrl: string | undefined
+} {
+  const primaryEmail = event.data.email_addresses?.find(
+    (email) => email.id === event.data.primary_email_address_id
+  )
+
+  return {
+    clerkId: requireText(event.data.id, "User id"),
+    email: requireText(primaryEmail?.email_address, "User email"),
+    firstName: event.data.first_name ?? undefined,
+    lastName: event.data.last_name ?? undefined,
+    imageUrl: event.data.image_url ?? undefined,
+  }
+}
+
+export function getClerkUserDeletedPayload(event: ClerkUserDeletedEvent): {
+  clerkId: string
+} {
+  return {
+    clerkId: requireText(event.data.id, "User id"),
+  }
+}
+
+export function getClerkMembershipCreatedPayload(
+  event: ClerkMembershipCreatedEvent
+): {
+  organizationId: string
+  userId: string
+  role: string
+} {
+  return {
+    organizationId: requireText(
+      event.data.organization.id,
+      "Organization id"
+    ),
+    userId: requireText(event.data.public_user_data.user_id, "User id"),
+    role: requireText(event.data.role, "Role"),
+  }
+}
+
+export function getClerkMembershipDeletedPayload(
+  event: ClerkMembershipDeletedEvent
+): {
+  organizationId: string
+  userId: string
+} {
+  return {
+    organizationId: requireText(
+      event.data.organization.id,
+      "Organization id"
+    ),
+    userId: requireText(event.data.public_user_data.user_id, "User id"),
+  }
+}
+
+export async function verifyClerkWebhook(
+  request: Request
+): Promise<WebhookEvent> {
   const payload = await request.text()
   const secret = requireText(
     process.env.CLERK_WEBHOOK_SECRET,

@@ -3,9 +3,15 @@ import createMiddleware from "next-intl/middleware"
 import { type NextRequest, NextResponse } from "next/server"
 
 import { routing } from "@/i18n/routing"
-import { getAuthPathnames, getLocaleFromPathname, stripLocalePrefix } from "@/lib/auth-paths"
+import {
+  getAuthPathnames,
+  getLocaleFromPathname,
+  getLocalizedPathname,
+  stripLocalePrefix,
+} from "@/lib/auth-paths"
 
 const handleI18nRouting = createMiddleware(routing)
+
 const PROTECTED_PATH_PREFIXES = [
   "/dashboard",
   "/patients",
@@ -15,8 +21,16 @@ const PROTECTED_PATH_PREFIXES = [
   "/ward-map",
 ]
 
+const ORG_EXEMPT_PATHS = ["/organization-selection", "/super-admin"]
+
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+}
+
+function isOrgExemptPath(pathname: string): boolean {
+  return ORG_EXEMPT_PATHS.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   )
 }
@@ -33,7 +47,17 @@ function getResolvedUrl(request: NextRequest, response: NextResponse): URL {
 export default clerkMiddleware(async (auth, request) => {
   const pathname = request.nextUrl.pathname
 
+  if (pathname.startsWith("/api/webhooks")) {
+    return NextResponse.next()
+  }
+
   if (pathname.startsWith("/api") || pathname.startsWith("/trpc")) {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     return NextResponse.next()
   }
 
@@ -46,16 +70,26 @@ export default clerkMiddleware(async (auth, request) => {
     return i18nResponse
   }
 
-  const { userId } = await auth()
+  const { userId, orgId } = await auth()
 
-  if (userId) {
-    return i18nResponse
+  if (!userId) {
+    const signInUrl = new URL(getAuthPathnames(locale).signIn, request.url)
+    signInUrl.searchParams.set("redirect_url", resolvedUrl.toString())
+
+    return NextResponse.redirect(signInUrl)
   }
 
-  const signInUrl = new URL(getAuthPathnames(locale).signIn, request.url)
-  signInUrl.searchParams.set("redirect_url", resolvedUrl.toString())
+  if (!orgId && !isOrgExemptPath(unlocalizedPathname)) {
+    const orgSelectionUrl = new URL(
+      getLocalizedPathname("/organization-selection", locale),
+      request.url
+    )
+    orgSelectionUrl.searchParams.set("redirect_url", resolvedUrl.toString())
 
-  return NextResponse.redirect(signInUrl)
+    return NextResponse.redirect(orgSelectionUrl)
+  }
+
+  return i18nResponse
 })
 
 export const config = {

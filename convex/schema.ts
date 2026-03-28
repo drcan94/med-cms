@@ -25,11 +25,30 @@ import {
  * identifier code are persisted for local disambiguation.
  */
 export default defineSchema({
+  users: defineTable({
+    clerkId: v.string(),
+    email: v.string(),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  })
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_email", ["email"]),
+
   organizations: defineTable({
     clerkId: v.string(),
     name: v.string(),
     subscriptionStatus: v.string(),
   }).index("by_clerk_id", ["clerkId"]),
+
+  organizationMemberships: defineTable({
+    organizationId: v.string(),
+    userId: v.string(),
+    role: v.string(),
+  })
+    .index("by_organization_id", ["organizationId"])
+    .index("by_user_id", ["userId"])
+    .index("by_org_and_user", ["organizationId", "userId"]),
 
   clinicSettings: defineTable({
     organizationId: v.string(),

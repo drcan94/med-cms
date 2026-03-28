@@ -1,10 +1,11 @@
 import { v } from "convex/values"
 
+import { mutation, query } from "./_generated/server"
+import { requireOrgMembership } from "./authz"
 import {
   clinicConventionsValidator,
   wardRoomValidator,
 } from "./clinicSettingsValidators"
-import { mutation, query } from "./_generated/server"
 
 type ConventionRule = {
   checklistItem: string
@@ -67,6 +68,8 @@ export const getClinicSettings = query({
     organizationId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireOrgMembership(ctx, args.organizationId)
+
     const organizationId = requireText(args.organizationId, "Organization")
     const settings = await ctx.db
       .query("clinicSettings")
@@ -90,6 +93,8 @@ export const upsertClinicSettings = mutation({
     wardLayout: v.array(wardRoomValidator),
   },
   handler: async (ctx, args) => {
+    await requireOrgMembership(ctx, args.organizationId)
+
     const organizationId = requireText(args.organizationId, "Organization")
     const conventions = sanitizeConventions(args.conventions)
     const wardLayout = sanitizeWardLayout(args.wardLayout)

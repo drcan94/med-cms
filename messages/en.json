@@ -898,5 +898,10 @@
       "past_due": "Past Due",
       "unpaid": "Unpaid"
     }
+  },
+  "OrganizationSelectionPage": {
+    "title": "Select Your Clinic",
+    "description": "Choose an existing clinic to continue, or create a new one to get started with WardOS.",
+    "redirecting": "Redirecting to workspace..."
   }
 }

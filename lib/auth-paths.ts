@@ -35,6 +35,7 @@ export function getLocalizedPathname(pathname: string, locale?: string): string 
 
 export function getAuthPathnames(locale?: string) {
   return {
+    organizationSelection: getLocalizedPathname("/organization-selection", locale),
     patients: getLocalizedPathname("/patients", locale),
     settings: getLocalizedPathname("/settings", locale),
     signIn: getLocalizedPathname("/sign-in", locale),

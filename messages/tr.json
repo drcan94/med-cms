@@ -898,5 +898,10 @@
       "past_due": "Ödeme gecikmiş",
       "unpaid": "Ödenmedi"
     }
+  },
+  "OrganizationSelectionPage": {
+    "title": "Kliniğinizi Seçin",
+    "description": "Devam etmek için mevcut bir klinik seçin veya WardOS'a başlamak için yeni bir klinik oluşturun.",
+    "redirecting": "Çalışma alanına yönlendiriliyor..."
   }
 }

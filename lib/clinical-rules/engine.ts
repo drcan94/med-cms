@@ -151,8 +151,8 @@ function evaluatePrimitiveCondition(patient: unknown, condition: RuleCondition):
     }
 
     default: {
-      const _exhaustiveCheck: never = condition
-      return false
+      const exhaustiveCheck: never = condition
+      throw new Error(`Unhandled condition type: ${exhaustiveCheck}`)
     }
   }
 }
@@ -191,8 +191,8 @@ function evaluateCondition(
     }
 
     default: {
-      const _exhaustiveCheck: never = condition
-      return false
+      const exhaustiveCheck: never = condition
+      throw new Error(`Unhandled composite operator: ${exhaustiveCheck}`)
     }
   }
 }

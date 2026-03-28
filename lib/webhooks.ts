@@ -1,4 +1,7 @@
-import type { WebhookEvent } from "@clerk/nextjs/server"
+import type {
+  OrganizationMembershipWebhookEvent,
+  WebhookEvent,
+} from "@clerk/nextjs/server"
 import { Webhook } from "svix"
 
 type ClerkOrganizationSyncEvent = Extract<
@@ -13,16 +16,6 @@ type ClerkUserSyncEvent = Extract<
 
 type ClerkUserDeletedEvent = Extract<WebhookEvent, { type: "user.deleted" }>
 
-type ClerkMembershipCreatedEvent = Extract<
-  WebhookEvent,
-  { type: "organizationMembership.created" }
->
-
-type ClerkMembershipDeletedEvent = Extract<
-  WebhookEvent,
-  { type: "organizationMembership.deleted" }
->
-
 const ORGANIZATION_WEBHOOK_TYPES = new Set([
   "organization.created",
   "organization.updated",
@@ -30,10 +23,6 @@ const ORGANIZATION_WEBHOOK_TYPES = new Set([
 
 const USER_SYNC_WEBHOOK_TYPES = new Set(["user.created", "user.updated"])
 
-const MEMBERSHIP_WEBHOOK_TYPES = new Set([
-  "organizationMembership.created",
-  "organizationMembership.deleted",
-])
 
 function requireText(
   value: string | null | undefined,
@@ -68,13 +57,13 @@ export function isClerkUserDeletedWebhook(
 
 export function isClerkMembershipCreatedWebhook(
   event: WebhookEvent
-): event is ClerkMembershipCreatedEvent {
+): event is OrganizationMembershipWebhookEvent {
   return event.type === "organizationMembership.created"
 }
 
 export function isClerkMembershipDeletedWebhook(
   event: WebhookEvent
-): event is ClerkMembershipDeletedEvent {
+): event is OrganizationMembershipWebhookEvent {
   return event.type === "organizationMembership.deleted"
 }
 
@@ -119,7 +108,7 @@ export function getClerkUserDeletedPayload(event: ClerkUserDeletedEvent): {
 }
 
 export function getClerkMembershipCreatedPayload(
-  event: ClerkMembershipCreatedEvent
+  event: OrganizationMembershipWebhookEvent
 ): {
   organizationId: string
   userId: string
@@ -136,7 +125,7 @@ export function getClerkMembershipCreatedPayload(
 }
 
 export function getClerkMembershipDeletedPayload(
-  event: ClerkMembershipDeletedEvent
+  event: OrganizationMembershipWebhookEvent
 ): {
   organizationId: string
   userId: string

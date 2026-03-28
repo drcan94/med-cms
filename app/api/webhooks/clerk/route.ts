@@ -35,6 +35,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
+  const eventType = event.type
+
   try {
     if (isClerkUserSyncWebhook(event)) {
       await runConvexServerMutation(
@@ -42,7 +44,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         getClerkUserPayload(event)
       )
 
-      return NextResponse.json({ received: true, type: event.type })
+      return NextResponse.json({ received: true, type: eventType })
     }
 
     if (isClerkUserDeletedWebhook(event)) {
@@ -51,7 +53,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         getClerkUserDeletedPayload(event)
       )
 
-      return NextResponse.json({ received: true, type: event.type })
+      return NextResponse.json({ received: true, type: eventType })
     }
 
     if (isClerkOrganizationWebhook(event)) {
@@ -60,7 +62,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         getClerkOrganizationPayload(event)
       )
 
-      return NextResponse.json({ received: true, type: event.type })
+      return NextResponse.json({ received: true, type: eventType })
     }
 
     if (isClerkMembershipCreatedWebhook(event)) {
@@ -69,7 +71,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         getClerkMembershipCreatedPayload(event)
       )
 
-      return NextResponse.json({ received: true, type: event.type })
+      return NextResponse.json({ received: true, type: eventType })
     }
 
     if (isClerkMembershipDeletedWebhook(event)) {
@@ -78,12 +80,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         getClerkMembershipDeletedPayload(event)
       )
 
-      return NextResponse.json({ received: true, type: event.type })
+      return NextResponse.json({ received: true, type: eventType })
     }
 
-    return NextResponse.json({ ignored: true, received: true, type: event.type })
+    return NextResponse.json({ ignored: true, received: true, type: eventType })
   } catch (error) {
-    console.error(`Webhook processing error for ${event.type}:`, error)
+    console.error(`Webhook processing error for ${eventType}:`, error)
 
     return NextResponse.json(
       {
@@ -91,7 +93,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           error instanceof Error
             ? error.message
             : "Unable to process the Clerk webhook.",
-        type: event.type,
+        type: eventType,
       },
       { status: 500 }
     )

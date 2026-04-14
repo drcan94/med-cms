@@ -235,6 +235,7 @@
     "status": {
       "active": "Aktif (Serviste)",
       "discharged": "Taburcu",
+      "on_leave": "İzinli",
       "onLeave": "İzinli",
       "transferred": "Devir / Yoğun Bakım",
       "deceased": "Ex"

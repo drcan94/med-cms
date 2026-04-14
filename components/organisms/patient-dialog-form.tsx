@@ -250,7 +250,8 @@ export function PatientDialogForm({
       return
     }
 
-    const finalEvaluation = evaluateClinicalRules(data, defaultClinicalRules)
+    const normalizedData = data
+    const finalEvaluation = evaluateClinicalRules(normalizedData, defaultClinicalRules)
     if (finalEvaluation.blocks.length > 0) {
       finalEvaluation.blocks.forEach((block) => {
         toast.error(block.message, {
@@ -273,6 +274,29 @@ export function PatientDialogForm({
 
     setIsSaving(true)
     const submissionId = `patient-submit-${Date.now()}`
+    const fallbackRecordedAt = new Date().toISOString()
+    const normalizedVitals = normalizedData.vitals
+      ? {
+          ...normalizedData.vitals,
+          recordedAt: normalizedData.vitals.recordedAt ?? fallbackRecordedAt,
+        }
+      : undefined
+    const normalizedOncologyHistory = normalizedData.oncologyHistory
+      ? {
+          chemotherapy: normalizedData.oncologyHistory.chemotherapy
+            ? {
+                ...normalizedData.oncologyHistory.chemotherapy,
+                received: normalizedData.oncologyHistory.chemotherapy.received ?? false,
+              }
+            : undefined,
+          radiotherapy: normalizedData.oncologyHistory.radiotherapy
+            ? {
+                ...normalizedData.oncologyHistory.radiotherapy,
+                received: normalizedData.oncologyHistory.radiotherapy.received ?? false,
+              }
+            : undefined,
+        }
+      : undefined
 
     console.info("[PatientForm] Submitting patient form", {
       bedId: data.bedId || STAGING_BED_ID,
@@ -292,28 +316,30 @@ export function PatientDialogForm({
         organizationId,
         userId,
         initials,
-        identifierCode: sanitizeIdentifierCodeInput(data.identifierCode),
-        bedId: data.bedId || STAGING_BED_ID,
-        diagnosis: data.diagnosis,
-        admissionDate: toClinicalIsoDate(data.admissionDate),
-        surgeryDate: data.surgeryDate ? toClinicalIsoDate(data.surgeryDate) : undefined,
-        procedureName: data.procedureName || undefined,
-        serviceName: data.serviceName || undefined,
+        identifierCode: sanitizeIdentifierCodeInput(normalizedData.identifierCode),
+        bedId: normalizedData.bedId || STAGING_BED_ID,
+        diagnosis: normalizedData.diagnosis,
+        admissionDate: toClinicalIsoDate(normalizedData.admissionDate),
+        surgeryDate: normalizedData.surgeryDate
+          ? toClinicalIsoDate(normalizedData.surgeryDate)
+          : undefined,
+        procedureName: normalizedData.procedureName || undefined,
+        serviceName: normalizedData.serviceName || undefined,
         version: isEditingExisting ? (patient?.version ?? 0) : undefined,
-        gender: data.gender,
-        isPregnant: data.isPregnant,
-        anamnesis: data.anamnesis,
-        vitals: data.vitals,
-        aaGradient: data.aaGradient,
-        criticalMedications: data.criticalMedications,
-        oncologyHistory: data.oncologyHistory,
-        reports: data.reports,
-        externalWard: data.externalWard,
-        thoracicInterventions: data.thoracicInterventions,
-        labCultures: data.labCultures,
-        consultations: data.consultations,
-        antibiotics: data.antibiotics,
-        visitNotes: data.visitNotes,
+        gender: normalizedData.gender,
+        isPregnant: normalizedData.isPregnant,
+        anamnesis: normalizedData.anamnesis,
+        vitals: normalizedVitals,
+        aaGradient: normalizedData.aaGradient,
+        criticalMedications: normalizedData.criticalMedications,
+        oncologyHistory: normalizedOncologyHistory,
+        reports: normalizedData.reports,
+        externalWard: normalizedData.externalWard,
+        thoracicInterventions: normalizedData.thoracicInterventions,
+        labCultures: normalizedData.labCultures,
+        consultations: normalizedData.consultations,
+        antibiotics: normalizedData.antibiotics,
+        visitNotes: normalizedData.visitNotes,
       })
 
       if (fullName) {

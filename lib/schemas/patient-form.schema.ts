@@ -51,7 +51,7 @@ export const vitalsSchema = z.object({
   pulse: z.number().min(20).max(300),
   spO2: z.number().min(0).max(100),
   symptoms: symptomsSchema,
-  recordedAt: z.string(),
+  recordedAt: z.string().optional(),
 })
 
 export const aaGradientResultSchema = z.object({
@@ -91,7 +91,7 @@ export const anamnesisSchema = z.object({
 })
 
 export const oncologyTreatmentSchema = z.object({
-  received: z.boolean(),
+  received: z.boolean().optional(),
   lastSessionAt: z.string().optional(),
   details: z.string().optional(),
 })

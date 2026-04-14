@@ -235,6 +235,7 @@
     "status": {
       "active": "Active (In Ward)",
       "discharged": "Discharged",
+      "on_leave": "On Leave",
       "onLeave": "On Leave",
       "transferred": "Transferred / ICU",
       "deceased": "Deceased"

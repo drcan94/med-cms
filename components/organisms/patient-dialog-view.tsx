@@ -81,6 +81,10 @@ const PATIENT_STATUS_OPTIONS: {
   { value: "deceased", labelKey: "deceased", variant: "destructive" },
 ]
 
+function getStatusLabelKey(status: PatientStatus): string {
+  return PATIENT_STATUS_OPTIONS.find((option) => option.value === status)?.labelKey ?? status
+}
+
 type PatientDialogViewProps = {
   onClose: () => void
   onEdit: () => void
@@ -781,7 +785,7 @@ export function PatientDialogView({
         status: newStatus,
       })
 
-      const statusLabel = tView(`status.${newStatus}`)
+      const statusLabel = tView(`status.${getStatusLabelKey(newStatus)}`)
       toast.success(tView("toasts.statusChanged", { status: statusLabel }))
 
       if (newStatus !== "active") {
@@ -812,7 +816,7 @@ export function PatientDialogView({
               {isArchived && (
                 <Badge variant="destructive" className="gap-1">
                   <Archive className="size-3" />
-                  {tView(`status.${currentStatus}`)}
+                  {tView(`status.${getStatusLabelKey(currentStatus)}`)}
                 </Badge>
               )}
             </div>
@@ -839,7 +843,7 @@ export function PatientDialogView({
                     className={currentStatus === option.value ? "bg-muted" : ""}
                   >
                     {currentStatus === option.value && "✓ "}
-                    {tView(`status.${option.value}`)}
+                    {tView(`status.${option.labelKey}`)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

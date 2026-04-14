@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useForm } from "react-hook-form"
+import { type FieldErrors, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "convex/react"
 import { Activity, Pill, Stethoscope, User, X } from "lucide-react"
@@ -34,6 +34,81 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/co
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type PatientRecord = Doc<"patients">
+type PatientFormTab = "basic" | "clinical" | "thoracic" | "meds"
+
+type FlattenedFormError = {
+  message: string
+  path: string
+}
+
+const FORM_ERROR_META_KEYS = new Set(["message", "type", "ref", "types"])
+
+function collectFormErrors(node: unknown, basePath = ""): FlattenedFormError[] {
+  if (!node || typeof node !== "object") {
+    return []
+  }
+
+  const record = node as Record<string, unknown>
+  const errors: FlattenedFormError[] = []
+
+  if (basePath && typeof record.message === "string" && record.message.trim()) {
+    errors.push({
+      message: record.message.trim(),
+      path: basePath,
+    })
+  }
+
+  for (const [key, value] of Object.entries(record)) {
+    if (FORM_ERROR_META_KEYS.has(key)) {
+      continue
+    }
+
+    const nextPath = key.match(/^\d+$/)
+      ? `${basePath}[${key}]`
+      : basePath
+        ? `${basePath}.${key}`
+        : key
+
+    errors.push(...collectFormErrors(value, nextPath))
+  }
+
+  return errors
+}
+
+function getTabForErrorPath(path: string): PatientFormTab {
+  if (
+    path.startsWith("vitals") ||
+    path.startsWith("anamnesis") ||
+    path.startsWith("aaGradient") ||
+    path.startsWith("gender") ||
+    path.startsWith("isPregnant")
+  ) {
+    return "clinical"
+  }
+
+  if (path.startsWith("thoracicInterventions")) {
+    return "thoracic"
+  }
+
+  if (
+    path.startsWith("criticalMedications") ||
+    path.startsWith("oncologyHistory") ||
+    path.startsWith("reports") ||
+    path.startsWith("externalWard") ||
+    path.startsWith("labCultures") ||
+    path.startsWith("consultations") ||
+    path.startsWith("antibiotics") ||
+    path.startsWith("visitNotes")
+  ) {
+    return "meds"
+  }
+
+  return "basic"
+}
+
+function formatFieldPath(path: string): string {
+  return path.replaceAll(/\[(\d+)\]/g, " #$1").replaceAll(".", " > ")
+}
 
 export type PatientDialogFormProps = {
   onCancel: () => void
@@ -86,6 +161,7 @@ export function PatientDialogForm({
   const { getLocalPatientName, setPatientName } = useLocalRoster()
   const [loadingItem, setLoadingItem] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState<PatientFormTab>("basic")
   const upsertPatient = useMutation(api.patients.upsertPatient)
   const toggleRequirement = useMutation(api.patients.toggleClinicalRequirement)
   const addTodo = useMutation(api.patients.addCustomTodo)
@@ -196,6 +272,19 @@ export function PatientDialogForm({
     }
 
     setIsSaving(true)
+    const submissionId = `patient-submit-${Date.now()}`
+
+    console.info("[PatientForm] Submitting patient form", {
+      bedId: data.bedId || STAGING_BED_ID,
+      hasAaGradient: Boolean(data.aaGradient),
+      hasAnamnesis: Boolean(data.anamnesis),
+      hasVitals: Boolean(data.vitals),
+      isEditingExisting,
+      organizationId,
+      patientId: patient?._id ?? null,
+      submissionId,
+      userId,
+    })
 
     try {
       await upsertPatient({
@@ -238,6 +327,17 @@ export function PatientDialogForm({
       toast.success(t(isEditingExisting ? "toasts.updated" : "toasts.created"))
       onOpenChange(false)
     } catch (error) {
+      console.error("[PatientForm] Submission failed", {
+        activeTab,
+        bedId: data.bedId || STAGING_BED_ID,
+        error,
+        isEditingExisting,
+        organizationId,
+        patientId: patient?._id ?? null,
+        submissionId,
+        userId,
+      })
+
       if (error instanceof Error) {
         if (error.message.startsWith("CONFLICT:")) {
           toast.error(t("toasts.conflict"), {
@@ -250,11 +350,41 @@ export function PatientDialogForm({
           toast.error(t("toasts.trialLimitReached"))
           return
         }
+
+        toast.error(t("toasts.saveError"), {
+          description: error.message,
+        })
+        return
       }
       toast.error(t("toasts.saveError"))
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const onInvalidSubmit = (errors: FieldErrors<PatientFormData>) => {
+    const flattenedErrors = collectFormErrors(errors)
+    const firstError = flattenedErrors[0]
+
+    console.error("[PatientForm] Validation blocked submit", {
+      activeTab,
+      errorCount: flattenedErrors.length,
+      errors: flattenedErrors,
+      formValues: form.getValues(),
+    })
+
+    if (!firstError) {
+      toast.error(t("toasts.saveError"))
+      return
+    }
+
+    const targetTab = getTabForErrorPath(firstError.path)
+    setActiveTab(targetTab)
+
+    toast.error("Form kaydedilemedi", {
+      description: `${flattenedErrors.length} doğrulama hatası var. ${tTabs(targetTab)} sekmesindeki "${formatFieldPath(firstError.path)}" alanını kontrol edin: ${firstError.message}`,
+      duration: 8000,
+    })
   }
 
   const handleToggleRequirement = async (item: string, completed: boolean) => {
@@ -306,7 +436,7 @@ export function PatientDialogForm({
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="flex h-full max-h-[90vh] flex-col">
+    <form onSubmit={form.handleSubmit(onSubmit, onInvalidSubmit)} className="flex h-full max-h-[90vh] flex-col">
         <DialogHeader className="shrink-0 border-b px-6 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
@@ -330,7 +460,11 @@ export function PatientDialogForm({
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
           <div className="flex-1 overflow-hidden">
-            <Tabs defaultValue="basic" className="flex h-full flex-col">
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => setActiveTab(value as PatientFormTab)}
+              className="flex h-full flex-col"
+            >
               {/* Clinical Alerts - Sticky header showing real-time rule evaluation */}
               {hasClinicalAlerts && (
                 <div className="shrink-0 border-b bg-muted/30 px-6 py-3">
@@ -429,7 +563,7 @@ export function PatientDialogForm({
               </Button>
               <Button
                 type="submit"
-                disabled={isSaving || clinicalEvaluation.blocks.length > 0}
+                disabled={isSaving}
               >
                 {isSaving
                   ? t("actions.saving")

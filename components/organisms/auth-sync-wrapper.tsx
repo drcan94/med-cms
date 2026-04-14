@@ -1,7 +1,7 @@
 "use client"
 
 import { type ReactNode, useEffect, useRef, useState } from "react"
-import { useAuth, useClerk, useOrganization } from "@clerk/nextjs"
+import { useAuth, useClerk, useOrganization, useUser } from "@clerk/nextjs"
 import { useMutation, useQuery } from "convex/react"
 import { AlertTriangle, Loader2, ShieldCheck } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 
-const SYNC_TIMEOUT_MS = 10_000
+const SYNC_TIMEOUT_MS = 20_000
 
 type AuthSyncWrapperProps = {
   children: ReactNode
@@ -20,6 +20,7 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
   const { signOut } = useClerk()
   const { isLoaded: isClerkLoaded, isSignedIn, orgId, orgRole } = useAuth()
   const { organization } = useOrganization()
+  const { user } = useUser()
   const [isTimedOut, setIsTimedOut] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const selfSyncAttemptRef = useRef<string | null>(null)
@@ -72,10 +73,21 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
       organizationId: orgId ?? undefined,
       organizationName: organization?.name ?? undefined,
       organizationRole: orgRole ?? undefined,
-    }).catch((error) => {
-      console.error("[AuthSync] Self-heal sync failed:", error)
-      selfSyncAttemptRef.current = null
+      email: user?.primaryEmailAddress?.emailAddress ?? undefined,
+      firstName: user?.firstName ?? undefined,
+      lastName: user?.lastName ?? undefined,
+      imageUrl: user?.imageUrl ?? undefined,
     })
+      .then((result) => {
+        console.log("[AuthSync] Self-heal sync result", result)
+        if (result.status !== "synced") {
+          selfSyncAttemptRef.current = null
+        }
+      })
+      .catch((error) => {
+        console.error("[AuthSync] Self-heal sync failed:", error)
+        selfSyncAttemptRef.current = null
+      })
   }, [
     ensureAuthRecords,
     isClerkLoaded,
@@ -84,6 +96,10 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
     orgRole,
     organization?.name,
     syncStatus,
+    user?.firstName,
+    user?.lastName,
+    user?.imageUrl,
+    user?.primaryEmailAddress?.emailAddress,
   ])
 
   useEffect(() => {
@@ -92,7 +108,7 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
     }
 
     timeoutRef.current = setTimeout(() => {
-      console.warn("[AuthSync] Timeout reached after 10 seconds")
+      console.warn("[AuthSync] Timeout reached after 20 seconds")
       setIsTimedOut(true)
     }, SYNC_TIMEOUT_MS)
 

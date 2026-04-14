@@ -79,6 +79,10 @@ export const ensureAuthRecords = mutation({
     organizationId: v.optional(v.string()),
     organizationName: v.optional(v.string()),
     organizationRole: v.optional(v.string()),
+    email: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -87,17 +91,21 @@ export const ensureAuthRecords = mutation({
       return { status: "unauthenticated" as const }
     }
 
-    const email = identity.email?.trim()
-
-    if (!email) {
-      console.warn("[CONVEX DB] ⚠️ Cannot upsert user without email:", identity.subject)
-      return { status: "missing_email" as const }
-    }
-
     const clerkId = identity.subject
-    const firstName = identity.givenName?.trim() || undefined
-    const lastName = identity.familyName?.trim() || undefined
-    const imageUrl = identity.pictureUrl?.trim() || undefined
+    const email =
+      args.email?.trim() ||
+      identity.email?.trim() ||
+      `${clerkId}@clerk.local`
+    const firstName = args.firstName?.trim() || identity.givenName?.trim() || undefined
+    const lastName = args.lastName?.trim() || identity.familyName?.trim() || undefined
+    const imageUrl = args.imageUrl?.trim() || identity.pictureUrl?.trim() || undefined
+
+    if (!args.email && !identity.email) {
+      console.warn("[CONVEX DB] ⚠️ Missing email claim, using fallback:", {
+        clerkId,
+        fallbackEmail: email,
+      })
+    }
 
     const existingUser = await ctx.db
       .query("users")

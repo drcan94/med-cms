@@ -59,6 +59,7 @@ function getDefaultFormValues(patient: PatientRecord | null, fullName: string): 
     version: patient?.version,
     anamnesis: patient?.anamnesis,
     vitals: patient?.vitals,
+    aaGradient: patient?.aaGradient,
     criticalMedications: patient?.criticalMedications,
     oncologyHistory: patient?.oncologyHistory,
     reports: patient?.reports,
@@ -214,6 +215,7 @@ export function PatientDialogForm({
         isPregnant: data.isPregnant,
         anamnesis: data.anamnesis,
         vitals: data.vitals,
+        aaGradient: data.aaGradient,
         criticalMedications: data.criticalMedications,
         oncologyHistory: data.oncologyHistory,
         reports: data.reports,
@@ -381,6 +383,7 @@ export function PatientDialogForm({
                 <TabsContent value="clinical" className="m-0">
                   <VitalsAnamnesisSection
                     control={form.control}
+                    defaultPatmMmHg={clinicSettings?.defaultPatmMmHg}
                     setValue={form.setValue}
                     watch={form.watch}
                   />

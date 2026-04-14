@@ -21,6 +21,7 @@ export type WardRoom = {
 
 export type ClinicSettingsRecord = {
   conventions: ConventionRule[] | string
+  defaultPatmMmHg: number
   organizationId: string
   wardLayout: WardRoom[]
 }

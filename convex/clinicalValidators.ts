@@ -86,6 +86,27 @@ export const vitalsValidator = v.object({
   recordedAt: v.string(),
 })
 
+export const aaGradientResultValidator = v.object({
+  estimatedFiO2: v.number(),
+  pAO2: v.number(),
+  gradient: v.number(),
+  expectedGradient: v.number(),
+  isElevated: v.boolean(),
+  etiology: v.union(v.literal("intrinsic"), v.literal("extrinsic")),
+  clinicalInterpretation: v.string(),
+})
+
+export const aaGradientValidator = v.object({
+  age: v.number(),
+  paO2: v.number(),
+  paCO2: v.number(),
+  fio2: v.optional(v.number()),
+  o2Liters: v.optional(v.number()),
+  patm: v.optional(v.number()),
+  waterVaporPressure: v.optional(v.number()),
+  result: v.optional(aaGradientResultValidator),
+})
+
 export const criticalMedicationValidator = v.object({
   anticoagulants: v.optional(
     v.array(

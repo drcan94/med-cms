@@ -19,3 +19,5 @@ export const wardRoomValidator = v.object({
   bedCapacity: v.number(),
   bedIds: v.optional(v.array(v.string())),
 })
+
+export const defaultPatmMmHgValidator = v.number()

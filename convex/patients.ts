@@ -9,6 +9,7 @@ import { internal } from "./_generated/api"
 import { mutation, query } from "./_generated/server"
 import { requireOrgMembership } from "./authz"
 import {
+  aaGradientValidator,
   anamnesisValidator,
   antibioticValidator,
   consultationValidator,
@@ -103,6 +104,7 @@ export const upsertPatient = mutation({
     isPregnant: v.optional(v.boolean()),
     anamnesis: v.optional(anamnesisValidator),
     vitals: v.optional(vitalsValidator),
+    aaGradient: v.optional(aaGradientValidator),
     criticalMedications: v.optional(criticalMedicationValidator),
     oncologyHistory: v.optional(oncologyHistoryValidator),
     reports: v.optional(reportsValidator),
@@ -122,6 +124,7 @@ export const upsertPatient = mutation({
       isPregnant: args.isPregnant,
       anamnesis: args.anamnesis,
       vitals: args.vitals,
+      aaGradient: args.aaGradient,
       criticalMedications: args.criticalMedications,
       oncologyHistory: args.oncologyHistory,
       reports: args.reports,

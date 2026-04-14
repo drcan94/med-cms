@@ -3,9 +3,11 @@ import { v } from "convex/values"
 
 import {
   clinicConventionsValidator,
+  defaultPatmMmHgValidator,
   wardRoomValidator,
 } from "./clinicSettingsValidators"
 import {
+  aaGradientValidator,
   anamnesisValidator,
   antibioticValidator,
   consultationValidator,
@@ -54,6 +56,7 @@ export default defineSchema({
     organizationId: v.string(),
     wardLayout: v.array(wardRoomValidator),
     conventions: clinicConventionsValidator,
+    defaultPatmMmHg: v.optional(defaultPatmMmHgValidator),
   }).index("by_organization_id", ["organizationId"]),
 
   patients: defineTable({
@@ -107,6 +110,8 @@ export default defineSchema({
     anamnesis: v.optional(anamnesisValidator),
     /** Latest vital signs. */
     vitals: v.optional(vitalsValidator),
+    /** A-a gradient module values and computed interpretation. */
+    aaGradient: v.optional(aaGradientValidator),
     /** Critical medications requiring close monitoring. */
     criticalMedications: v.optional(criticalMedicationValidator),
     /** Oncology history (chemotherapy, radiotherapy). */

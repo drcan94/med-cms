@@ -1,9 +1,14 @@
 "use client"
 
 import { Controller, type Control, type UseFormSetValue, type UseFormWatch } from "react-hook-form"
-import { Activity, Cigarette, Radiation } from "lucide-react"
+import { Activity, Cigarette, FlaskConical, Radiation } from "lucide-react"
 import { useTranslations } from "next-intl"
 
+import {
+  calculateAaGradient,
+  DEFAULT_PATM_MMHG,
+  DEFAULT_WATER_VAPOR_PRESSURE_MMHG,
+} from "@/lib/aa-gradient-calculator"
 import type { PatientFormData } from "@/lib/schemas/patient-form.schema"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -88,16 +93,19 @@ const SYMPTOM_CATEGORIES: SymptomCategory[] = [
 
 type VitalsAnamnesisSectionProps = {
   control: Control<PatientFormData>
+  defaultPatmMmHg?: number
   setValue: UseFormSetValue<PatientFormData>
   watch: UseFormWatch<PatientFormData>
 }
 
 export function VitalsAnamnesisSection({
   control,
+  defaultPatmMmHg,
   setValue,
   watch,
 }: Readonly<VitalsAnamnesisSectionProps>) {
   const t = useTranslations("PatientFormSections")
+  const effectiveDefaultPatmMmHg = defaultPatmMmHg ?? DEFAULT_PATM_MMHG
 
   const initializeVitals = () => {
     const currentVitals = watch("vitals")
@@ -137,9 +145,56 @@ export function VitalsAnamnesisSection({
     }
   }
 
+  const initializeAaGradient = () => {
+    const currentAaGradient = watch("aaGradient")
+    if (!currentAaGradient) {
+      setValue("aaGradient", {
+        age: 65,
+        paO2: 70,
+        paCO2: 40,
+        patm: effectiveDefaultPatmMmHg,
+        waterVaporPressure: DEFAULT_WATER_VAPOR_PRESSURE_MMHG,
+      })
+    }
+  }
+
+  const calculateAndSetAaGradient = () => {
+    const currentAaGradient = watch("aaGradient")
+
+    if (!currentAaGradient) {
+      return
+    }
+
+    if (
+      typeof currentAaGradient.age !== "number" ||
+      typeof currentAaGradient.paO2 !== "number" ||
+      typeof currentAaGradient.paCO2 !== "number"
+    ) {
+      return
+    }
+
+    const result = calculateAaGradient({
+      age: currentAaGradient.age,
+      paO2: currentAaGradient.paO2,
+      paCO2: currentAaGradient.paCO2,
+      fio2: currentAaGradient.fio2,
+      o2Liters: currentAaGradient.o2Liters,
+      patm: currentAaGradient.patm,
+      waterVaporPressure: currentAaGradient.waterVaporPressure,
+    })
+
+    setValue("aaGradient.result", result, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    })
+  }
+
   const watchChemotherapy = watch("oncologyHistory.chemotherapy.received")
   const watchRadiotherapy = watch("oncologyHistory.radiotherapy.received")
   const watchSmokingStatus = watch("anamnesis.smoking.status")
+  const watchAaGradient = watch("aaGradient")
+  const aaGradientResult = watchAaGradient?.result
 
   return (
     <div className="space-y-6">
@@ -288,6 +343,248 @@ export function VitalsAnamnesisSection({
               ))}
             </div>
           </div>
+        </FieldGroup>
+      </FieldSet>
+
+      <hr className="border-dashed" />
+
+      <FieldSet>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FlaskConical className="size-4 text-cyan-600" />
+            <FieldLegend variant="label">{t("aaGradient.title")}</FieldLegend>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={initializeAaGradient}
+              className="text-xs text-primary hover:underline"
+            >
+              {t("aaGradient.initialize")}
+            </button>
+            <button
+              type="button"
+              onClick={calculateAndSetAaGradient}
+              className="text-xs text-primary hover:underline"
+            >
+              {t("aaGradient.calculate")}
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">{t("aaGradient.description")}</p>
+
+        <FieldGroup className="gap-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Controller
+              name="aaGradient.age"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name} className="text-xs">
+                    {t("aaGradient.age")}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="number"
+                    min="0"
+                    max="120"
+                    value={field.value ?? ""}
+                    aria-invalid={fieldState.invalid}
+                    className="h-9"
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="aaGradient.paO2"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name} className="text-xs">
+                    {t("aaGradient.paO2")}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="number"
+                    min="0"
+                    value={field.value ?? ""}
+                    aria-invalid={fieldState.invalid}
+                    className="h-9"
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="aaGradient.paCO2"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name} className="text-xs">
+                    {t("aaGradient.paCO2")}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="number"
+                    min="0"
+                    value={field.value ?? ""}
+                    aria-invalid={fieldState.invalid}
+                    className="h-9"
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="aaGradient.fio2"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name} className="text-xs">
+                    {t("aaGradient.fio2")}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="number"
+                    step="0.01"
+                    min="0.21"
+                    max="1"
+                    value={field.value ?? ""}
+                    aria-invalid={fieldState.invalid}
+                    placeholder="0.50"
+                    className="h-9"
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                  <FieldDescription className="text-xs">
+                    {t("aaGradient.fio2Hint")}
+                  </FieldDescription>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="aaGradient.o2Liters"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name} className="text-xs">
+                    {t("aaGradient.o2Liters")}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={field.value ?? ""}
+                    aria-invalid={fieldState.invalid}
+                    placeholder="5"
+                    className="h-9"
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                  <FieldDescription className="text-xs">
+                    {t("aaGradient.o2LitersHint")}
+                  </FieldDescription>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="aaGradient.patm"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name} className="text-xs">
+                    {t("aaGradient.patm")}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="number"
+                    min="300"
+                    max="900"
+                    value={field.value ?? ""}
+                    aria-invalid={fieldState.invalid}
+                    placeholder={String(effectiveDefaultPatmMmHg)}
+                    className="h-9"
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="aaGradient.waterVaporPressure"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name} className="text-xs">
+                    {t("aaGradient.waterVaporPressure")}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={field.value ?? ""}
+                    aria-invalid={fieldState.invalid}
+                    placeholder={String(DEFAULT_WATER_VAPOR_PRESSURE_MMHG)}
+                    className="h-9"
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+          </div>
+
+          {aaGradientResult && (
+            <Card
+              className={
+                aaGradientResult.etiology === "intrinsic"
+                  ? "border-red-200 bg-red-50/30 dark:border-red-900 dark:bg-red-950/20"
+                  : "border-emerald-200 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20"
+              }
+            >
+              <CardContent className="space-y-3 p-4">
+                <p className="text-sm font-medium">
+                  {aaGradientResult.etiology === "intrinsic"
+                    ? t("aaGradient.result.intrinsic")
+                    : t("aaGradient.result.extrinsic")}
+                </p>
+                <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                  <p>{t("aaGradient.result.estimatedFiO2", { value: aaGradientResult.estimatedFiO2 })}</p>
+                  <p>{t("aaGradient.result.pAO2", { value: aaGradientResult.pAO2 })}</p>
+                  <p>{t("aaGradient.result.gradient", { value: aaGradientResult.gradient })}</p>
+                  <p>
+                    {t("aaGradient.result.expectedGradient", {
+                      value: aaGradientResult.expectedGradient,
+                    })}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {aaGradientResult.etiology === "intrinsic"
+                    ? t("aaGradient.result.intrinsicHint")
+                    : t("aaGradient.result.extrinsicHint")}
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </FieldGroup>
       </FieldSet>
 

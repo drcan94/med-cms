@@ -54,6 +54,27 @@ export const vitalsSchema = z.object({
   recordedAt: z.string(),
 })
 
+export const aaGradientResultSchema = z.object({
+  estimatedFiO2: z.number(),
+  pAO2: z.number(),
+  gradient: z.number(),
+  expectedGradient: z.number(),
+  isElevated: z.boolean(),
+  etiology: z.enum(["intrinsic", "extrinsic"]),
+  clinicalInterpretation: z.string(),
+})
+
+export const aaGradientSchema = z.object({
+  age: z.number().min(0).max(120),
+  paO2: z.number().min(0),
+  paCO2: z.number().min(0),
+  fio2: z.number().min(0.21).max(1).optional(),
+  o2Liters: z.number().min(0).max(25).optional(),
+  patm: z.number().min(300).max(900).optional(),
+  waterVaporPressure: z.number().min(0).max(100).optional(),
+  result: aaGradientResultSchema.optional(),
+})
+
 export const smokingHistorySchema = z.object({
   status: z.enum(["active", "former", "never"]),
   packYears: z.number().min(0).optional(),
@@ -206,6 +227,7 @@ export const patientFormSchema = z.object({
   version: z.number().optional(),
   anamnesis: anamnesisSchema.optional(),
   vitals: vitalsSchema.optional(),
+  aaGradient: aaGradientSchema.optional(),
   criticalMedications: criticalMedicationSchema.optional(),
   oncologyHistory: oncologyHistorySchema.optional(),
   reports: reportsSchema.optional(),
@@ -220,6 +242,8 @@ export const patientFormSchema = z.object({
 export type PatientFormData = z.infer<typeof patientFormSchema>
 export type ThoracicIntervention = z.infer<typeof thoracicInterventionSchema>
 export type Vitals = z.infer<typeof vitalsSchema>
+export type AaGradient = z.infer<typeof aaGradientSchema>
+export type AaGradientResult = z.infer<typeof aaGradientResultSchema>
 export type Anamnesis = z.infer<typeof anamnesisSchema>
 export type SmokingHistory = z.infer<typeof smokingHistorySchema>
 export type CriticalMedication = z.infer<typeof criticalMedicationSchema>

@@ -302,6 +302,31 @@
         }
       }
     },
+    "aaGradient": {
+      "title": "A-a Gradient Module",
+      "description": "Classifies intrinsic vs extrinsic causes from ABG data. You can enter FiO2 or O2 L/min.",
+      "initialize": "Initialize A-a module",
+      "calculate": "Calculate A-a",
+      "age": "Age",
+      "paO2": "PaO2 (mmHg)",
+      "paCO2": "PaCO2 (mmHg)",
+      "fio2": "FiO2 (0.21 - 1.0)",
+      "fio2Hint": "Use direct FiO2 in intubated/NIMV patients. Percent entry (e.g. 40) is auto-converted to 0.40.",
+      "o2Liters": "O2 (L/min)",
+      "o2LitersHint": "Use flow rate for ward patients.",
+      "patm": "Atmospheric Pressure (mmHg, institution default)",
+      "waterVaporPressure": "Water Vapor Pressure (mmHg)",
+      "result": {
+        "intrinsic": "Elevated A-a Gradient: supports intrinsic lung pathology",
+        "extrinsic": "Normal A-a Gradient: supports extrinsic/hypoventilation causes",
+        "estimatedFiO2": "Estimated FiO2: {value}",
+        "pAO2": "PAO2: {value} mmHg",
+        "gradient": "A-a Gradient: {value} mmHg",
+        "expectedGradient": "Expected Gradient: {value} mmHg",
+        "intrinsicHint": "Consider intrinsic etiologies such as V/Q mismatch, shunt, or diffusion impairment.",
+        "extrinsicHint": "Hypoventilation or extrapulmonary etiologies may be more likely."
+      }
+    },
     "anamnesis": {
       "title": "Anamnesis",
       "initialize": "Initialize anamnesis",

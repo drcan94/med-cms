@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Droplets,
   FileText,
+  FlaskConical,
   Hash,
   HeartPulse,
   MapPin,
@@ -59,6 +60,7 @@ import { Separator } from "@/components/ui/separator"
 type PatientRecord = Doc<"patients">
 type Vitals = NonNullable<PatientRecord["vitals"]>
 type Anamnesis = NonNullable<PatientRecord["anamnesis"]>
+type AaGradient = NonNullable<PatientRecord["aaGradient"]>
 type ThoracicIntervention = NonNullable<PatientRecord["thoracicInterventions"]>[number]
 type Antibiotic = NonNullable<PatientRecord["antibiotics"]>[number]
 type LabCulture = NonNullable<PatientRecord["labCultures"]>[number]
@@ -216,6 +218,52 @@ function VitalsCard({ vitals }: Readonly<{ vitals: Vitals }>) {
         <p className="text-xs text-muted-foreground">
           Recorded: {formatDisplayDate(vitals.recordedAt)}
         </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function AaGradientCard({ aaGradient }: Readonly<{ aaGradient: AaGradient }>) {
+  if (!aaGradient.result) {
+    return null
+  }
+
+  const { result } = aaGradient
+  const isIntrinsic = result.etiology === "intrinsic"
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <FlaskConical className={`size-4 ${isIntrinsic ? "text-red-500" : "text-emerald-500"}`} />
+          A-a Gradient
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Badge variant={isIntrinsic ? "destructive" : "secondary"} className="text-xs">
+          {isIntrinsic
+            ? "İntrensek patoloji lehine"
+            : "Ekstrensek/hipoventilasyon lehine"}
+        </Badge>
+
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="rounded bg-muted/40 p-2">
+            <p className="text-muted-foreground">Estimated FiO2</p>
+            <p className="font-semibold">{result.estimatedFiO2}</p>
+          </div>
+          <div className="rounded bg-muted/40 p-2">
+            <p className="text-muted-foreground">PAO2</p>
+            <p className="font-semibold">{result.pAO2} mmHg</p>
+          </div>
+          <div className="rounded bg-muted/40 p-2">
+            <p className="text-muted-foreground">A-a Gradient</p>
+            <p className="font-semibold">{result.gradient} mmHg</p>
+          </div>
+          <div className="rounded bg-muted/40 p-2">
+            <p className="text-muted-foreground">Expected Gradient</p>
+            <p className="font-semibold">{result.expectedGradient} mmHg</p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
@@ -897,6 +945,9 @@ export function PatientDialogView({
           <div className="grid gap-4 md:grid-cols-2">
             {/* Vitals Card */}
             {patient.vitals && <VitalsCard vitals={patient.vitals} />}
+
+            {/* A-a Gradient Card */}
+            {patient.aaGradient && <AaGradientCard aaGradient={patient.aaGradient} />}
 
             {/* Anamnesis Card */}
             {patient.anamnesis && <AnamnesisCard anamnesis={patient.anamnesis} />}

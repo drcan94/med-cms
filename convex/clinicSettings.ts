@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server"
 import { requireOrgMembership } from "./authz"
 import {
   clinicConventionsValidator,
+  defaultPatmMmHgValidator,
   wardRoomValidator,
 } from "./clinicSettingsValidators"
 
@@ -21,6 +22,8 @@ type WardRoom = {
   roomId: string
   roomName: string
 }
+
+const DEFAULT_PATM_MMHG = 760
 
 function requireText(value: string, fieldName: string): string {
   const normalizedValue = value.trim()
@@ -63,6 +66,16 @@ function sanitizeWardLayout(wardLayout: WardRoom[]): WardRoom[] {
   }))
 }
 
+function sanitizeDefaultPatmMmHg(
+  defaultPatmMmHg: number | undefined
+): number | undefined {
+  if (defaultPatmMmHg === undefined) {
+    return undefined
+  }
+
+  return Math.max(300, Math.min(900, Math.trunc(defaultPatmMmHg)))
+}
+
 export const getClinicSettings = query({
   args: {
     organizationId: v.string(),
@@ -80,6 +93,7 @@ export const getClinicSettings = query({
 
     return {
       conventions: settings?.conventions ?? [],
+      defaultPatmMmHg: settings?.defaultPatmMmHg ?? DEFAULT_PATM_MMHG,
       organizationId,
       wardLayout: settings?.wardLayout ?? [],
     }
@@ -91,6 +105,7 @@ export const upsertClinicSettings = mutation({
     organizationId: v.string(),
     conventions: clinicConventionsValidator,
     wardLayout: v.array(wardRoomValidator),
+    defaultPatmMmHg: v.optional(defaultPatmMmHgValidator),
   },
   handler: async (ctx, args) => {
     await requireOrgMembership(ctx, args.organizationId)
@@ -98,6 +113,7 @@ export const upsertClinicSettings = mutation({
     const organizationId = requireText(args.organizationId, "Organization")
     const conventions = sanitizeConventions(args.conventions)
     const wardLayout = sanitizeWardLayout(args.wardLayout)
+    const defaultPatmMmHg = sanitizeDefaultPatmMmHg(args.defaultPatmMmHg)
     const existingSettings = await ctx.db
       .query("clinicSettings")
       .withIndex("by_organization_id", (queryBuilder) =>
@@ -108,6 +124,7 @@ export const upsertClinicSettings = mutation({
     if (existingSettings) {
       await ctx.db.patch(existingSettings._id, {
         conventions,
+        defaultPatmMmHg,
         wardLayout,
       })
 
@@ -116,6 +133,7 @@ export const upsertClinicSettings = mutation({
 
     return ctx.db.insert("clinicSettings", {
       conventions,
+      defaultPatmMmHg,
       organizationId,
       wardLayout,
     })

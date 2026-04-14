@@ -302,6 +302,31 @@
         }
       }
     },
+    "aaGradient": {
+      "title": "A-a Gradient Modülü",
+      "description": "Kan gazı verileri ile intrinsik/ekstrinsik ayrımı yapar. FiO2 veya O2 L/dk girilebilir.",
+      "initialize": "A-a modülü başlat",
+      "calculate": "A-a hesapla",
+      "age": "Yaş",
+      "paO2": "PaO2 (mmHg)",
+      "paCO2": "PaCO2 (mmHg)",
+      "fio2": "FiO2 (0.21 - 1.0)",
+      "fio2Hint": "Entübe/NIMV hastalarda net FiO2 girin. Yüzde giriş (örn: 40) otomatik 0.40 kabul edilir.",
+      "o2Liters": "O2 (L/dk)",
+      "o2LitersHint": "Servis hastalarında litre/dakika girin.",
+      "patm": "Atmosfer Basıncı (mmHg, kurum varsayılanı)",
+      "waterVaporPressure": "Su Buharı Basıncı (mmHg)",
+      "result": {
+        "intrinsic": "Artmış A-a Gradient: İntrensek akciğer patolojisi lehine",
+        "extrinsic": "Normal A-a Gradient: Ekstrensek/hipoventilasyon lehine",
+        "estimatedFiO2": "Tahmini FiO2: {value}",
+        "pAO2": "PAO2: {value} mmHg",
+        "gradient": "A-a Gradient: {value} mmHg",
+        "expectedGradient": "Beklenen Gradient: {value} mmHg",
+        "intrinsicHint": "V/Q uyumsuzluğu, şant veya difüzyon bozukluğu gibi intrensek nedenler düşünülmeli.",
+        "extrinsicHint": "Hipoventilasyon veya ekstrapulmoner nedenler ön planda olabilir."
+      }
+    },
     "anamnesis": {
       "title": "Anamnez",
       "initialize": "Anamnez başlat",

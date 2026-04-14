@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { Controller, type Control, type UseFormSetValue, type UseFormWatch } from "react-hook-form"
 import { Activity, Cigarette, FlaskConical, Radiation } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -145,56 +146,58 @@ export function VitalsAnamnesisSection({
     }
   }
 
-  const initializeAaGradient = () => {
-    const currentAaGradient = watch("aaGradient")
-    if (!currentAaGradient) {
-      setValue("aaGradient", {
-        age: 65,
-        paO2: 70,
-        paCO2: 40,
-        patm: effectiveDefaultPatmMmHg,
-        waterVaporPressure: DEFAULT_WATER_VAPOR_PRESSURE_MMHG,
-      })
-    }
-  }
-
-  const calculateAndSetAaGradient = () => {
-    const currentAaGradient = watch("aaGradient")
-
-    if (!currentAaGradient) {
-      return
-    }
-
-    if (
-      typeof currentAaGradient.age !== "number" ||
-      typeof currentAaGradient.paO2 !== "number" ||
-      typeof currentAaGradient.paCO2 !== "number"
-    ) {
-      return
-    }
-
-    const result = calculateAaGradient({
-      age: currentAaGradient.age,
-      paO2: currentAaGradient.paO2,
-      paCO2: currentAaGradient.paCO2,
-      fio2: currentAaGradient.fio2,
-      o2Liters: currentAaGradient.o2Liters,
-      patm: currentAaGradient.patm,
-      waterVaporPressure: currentAaGradient.waterVaporPressure,
-    })
-
-    setValue("aaGradient.result", result, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    })
-  }
-
   const watchChemotherapy = watch("oncologyHistory.chemotherapy.received")
   const watchRadiotherapy = watch("oncologyHistory.radiotherapy.received")
   const watchSmokingStatus = watch("anamnesis.smoking.status")
   const watchAaGradient = watch("aaGradient")
+  const aaAge = watch("aaGradient.age")
+  const aaPaO2 = watch("aaGradient.paO2")
+  const aaPaCO2 = watch("aaGradient.paCO2")
+  const aaFiO2 = watch("aaGradient.fio2")
+  const aaO2Liters = watch("aaGradient.o2Liters")
+  const aaPatm = watch("aaGradient.patm")
+  const aaWaterVaporPressure = watch("aaGradient.waterVaporPressure")
   const aaGradientResult = watchAaGradient?.result
+
+  useEffect(() => {
+    if (
+      typeof aaAge !== "number" ||
+      typeof aaPaO2 !== "number" ||
+      typeof aaPaCO2 !== "number"
+    ) {
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      const result = calculateAaGradient({
+        age: aaAge,
+        paO2: aaPaO2,
+        paCO2: aaPaCO2,
+        fio2: aaFiO2,
+        o2Liters: aaO2Liters,
+        patm: aaPatm ?? effectiveDefaultPatmMmHg,
+        waterVaporPressure: aaWaterVaporPressure ?? DEFAULT_WATER_VAPOR_PRESSURE_MMHG,
+      })
+
+      setValue("aaGradient.result", result, {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      })
+    }, 450)
+
+    return () => clearTimeout(timeoutId)
+  }, [
+    aaAge,
+    aaFiO2,
+    aaO2Liters,
+    aaPaCO2,
+    aaPaO2,
+    aaPatm,
+    aaWaterVaporPressure,
+    effectiveDefaultPatmMmHg,
+    setValue,
+  ])
 
   return (
     <div className="space-y-6">
@@ -227,6 +230,7 @@ export function VitalsAnamnesisSection({
                     step="0.1"
                     min="30"
                     max="45"
+                    value={field.value ?? ""}
                     aria-invalid={fieldState.invalid}
                     placeholder="36.5"
                     className="h-9"
@@ -274,6 +278,7 @@ export function VitalsAnamnesisSection({
                     type="number"
                     min="20"
                     max="300"
+                    value={field.value ?? ""}
                     aria-invalid={fieldState.invalid}
                     placeholder="80"
                     className="h-9"
@@ -298,6 +303,7 @@ export function VitalsAnamnesisSection({
                     type="number"
                     min="0"
                     max="100"
+                    value={field.value ?? ""}
                     aria-invalid={fieldState.invalid}
                     placeholder="98"
                     className="h-9"
@@ -353,22 +359,6 @@ export function VitalsAnamnesisSection({
           <div className="flex items-center gap-2">
             <FlaskConical className="size-4 text-cyan-600" />
             <FieldLegend variant="label">{t("aaGradient.title")}</FieldLegend>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={initializeAaGradient}
-              className="text-xs text-primary hover:underline"
-            >
-              {t("aaGradient.initialize")}
-            </button>
-            <button
-              type="button"
-              onClick={calculateAndSetAaGradient}
-              className="text-xs text-primary hover:underline"
-            >
-              {t("aaGradient.calculate")}
-            </button>
           </div>
         </div>
         <p className="text-xs text-muted-foreground">{t("aaGradient.description")}</p>

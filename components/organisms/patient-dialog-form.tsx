@@ -179,6 +179,9 @@ export function PatientDialogForm({
     : ""
 
   const form = useForm<PatientFormData>({
+    delayError: 700,
+    mode: "onSubmit",
+    reValidateMode: "onBlur",
     resolver: zodResolver(patientFormSchema),
     defaultValues: getDefaultFormValues(patient, initialFullName),
   })

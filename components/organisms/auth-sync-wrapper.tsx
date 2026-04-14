@@ -1,7 +1,7 @@
 "use client"
 
 import { type ReactNode, useEffect, useRef, useState } from "react"
-import { useAuth, useClerk, useOrganization, useUser } from "@clerk/nextjs"
+import { useAuth, useClerk, useOrganization } from "@clerk/nextjs"
 import { useMutation, useQuery } from "convex/react"
 import { AlertTriangle, Loader2, ShieldCheck } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -20,7 +20,6 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
   const { signOut } = useClerk()
   const { isLoaded: isClerkLoaded, isSignedIn, orgId, orgRole } = useAuth()
   const { organization } = useOrganization()
-  const { user } = useUser()
   const [isTimedOut, setIsTimedOut] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const selfSyncAttemptRef = useRef<string | null>(null)
@@ -52,7 +51,7 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
   }, [isClerkLoaded, isSignedIn, orgId, orgRole, syncStatus, isPending, isTimedOut])
 
   useEffect(() => {
-    if (!isClerkLoaded || !isSignedIn || !user || syncStatus === undefined) {
+    if (!isClerkLoaded || !isSignedIn || syncStatus === undefined) {
       return
     }
 
@@ -60,13 +59,14 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
       return
     }
 
-    const attemptKey = `${syncStatus.status}:${orgId ?? "no_org"}:${user.id}`
+    const attemptKey = `${syncStatus.status}:${orgId ?? "no_org"}`
 
     if (selfSyncAttemptRef.current === attemptKey) {
       return
     }
 
     selfSyncAttemptRef.current = attemptKey
+    console.log("[AuthSync] Self-heal sync triggered", { attemptKey })
 
     void ensureAuthRecords({
       organizationId: orgId ?? undefined,
@@ -84,7 +84,6 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
     orgRole,
     organization?.name,
     syncStatus,
-    user,
   ])
 
   useEffect(() => {

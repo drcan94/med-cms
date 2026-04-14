@@ -1,6 +1,6 @@
 import { v } from "convex/values"
 
-import { internalMutation, query } from "./_generated/server"
+import { internalMutation, mutation, query } from "./_generated/server"
 import { requireAuth } from "./authz"
 
 export const getCurrentUser = query({
@@ -71,6 +71,92 @@ export const getUserByClerkId = query({
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique()
+  },
+})
+
+export const ensureAuthRecords = mutation({
+  args: {
+    organizationId: v.optional(v.string()),
+    organizationName: v.optional(v.string()),
+    organizationRole: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+
+    if (!identity) {
+      return { status: "unauthenticated" as const }
+    }
+
+    const email = identity.email?.trim()
+
+    if (!email) {
+      console.warn("[CONVEX DB] ⚠️ Cannot upsert user without email:", identity.subject)
+      return { status: "missing_email" as const }
+    }
+
+    const clerkId = identity.subject
+    const firstName = identity.givenName?.trim() || undefined
+    const lastName = identity.familyName?.trim() || undefined
+    const imageUrl = identity.pictureUrl?.trim() || undefined
+
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
+      .unique()
+
+    if (existingUser) {
+      await ctx.db.patch(existingUser._id, {
+        email,
+        firstName,
+        lastName,
+        imageUrl,
+      })
+    } else {
+      await ctx.db.insert("users", {
+        clerkId,
+        email,
+        firstName,
+        lastName,
+        imageUrl,
+      })
+    }
+
+    if (args.organizationId) {
+      const organizationId = args.organizationId.trim()
+
+      const existingOrganization = await ctx.db
+        .query("organizations")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", organizationId))
+        .unique()
+
+      if (!existingOrganization) {
+        await ctx.db.insert("organizations", {
+          clerkId: organizationId,
+          name: args.organizationName?.trim() || "Untitled organization",
+          subscriptionStatus: "trial",
+        })
+      }
+
+      const existingMembership = await ctx.db
+        .query("organizationMemberships")
+        .withIndex("by_org_and_user", (q) =>
+          q.eq("organizationId", organizationId).eq("userId", clerkId)
+        )
+        .unique()
+
+      if (!existingMembership) {
+        await ctx.db.insert("organizationMemberships", {
+          organizationId,
+          userId: clerkId,
+          role: args.organizationRole?.trim() || "org:member",
+        })
+      }
+    }
+
+    return {
+      status: "synced" as const,
+      organizationSynced: Boolean(args.organizationId),
+    }
   },
 })
 

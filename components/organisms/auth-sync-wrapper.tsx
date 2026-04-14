@@ -1,8 +1,8 @@
 "use client"
 
 import { type ReactNode, useEffect, useRef, useState } from "react"
-import { useAuth, useClerk } from "@clerk/nextjs"
-import { useQuery } from "convex/react"
+import { useAuth, useClerk, useOrganization, useUser } from "@clerk/nextjs"
+import { useMutation, useQuery } from "convex/react"
 import { AlertTriangle, Loader2, ShieldCheck } from "lucide-react"
 import { useTranslations } from "next-intl"
 
@@ -18,9 +18,13 @@ type AuthSyncWrapperProps = {
 export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
   const t = useTranslations("AuthSyncWrapper")
   const { signOut } = useClerk()
-  const { isLoaded: isClerkLoaded, isSignedIn, orgId } = useAuth()
+  const { isLoaded: isClerkLoaded, isSignedIn, orgId, orgRole } = useAuth()
+  const { organization } = useOrganization()
+  const { user } = useUser()
   const [isTimedOut, setIsTimedOut] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const selfSyncAttemptRef = useRef<string | null>(null)
+  const ensureAuthRecords = useMutation(api.users.ensureAuthRecords)
 
   const syncStatus = useQuery(
     api.users.getAuthSyncStatus,
@@ -40,11 +44,48 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
       isClerkLoaded,
       isSignedIn,
       orgId,
+      orgRole,
       syncStatus,
       isPending,
       isTimedOut,
     })
-  }, [isClerkLoaded, isSignedIn, orgId, syncStatus, isPending, isTimedOut])
+  }, [isClerkLoaded, isSignedIn, orgId, orgRole, syncStatus, isPending, isTimedOut])
+
+  useEffect(() => {
+    if (!isClerkLoaded || !isSignedIn || !user || syncStatus === undefined) {
+      return
+    }
+
+    if (syncStatus.status !== "user_pending" && syncStatus.status !== "membership_pending") {
+      return
+    }
+
+    const attemptKey = `${syncStatus.status}:${orgId ?? "no_org"}:${user.id}`
+
+    if (selfSyncAttemptRef.current === attemptKey) {
+      return
+    }
+
+    selfSyncAttemptRef.current = attemptKey
+
+    void ensureAuthRecords({
+      organizationId: orgId ?? undefined,
+      organizationName: organization?.name ?? undefined,
+      organizationRole: orgRole ?? undefined,
+    }).catch((error) => {
+      console.error("[AuthSync] Self-heal sync failed:", error)
+      selfSyncAttemptRef.current = null
+    })
+  }, [
+    ensureAuthRecords,
+    isClerkLoaded,
+    isSignedIn,
+    orgId,
+    orgRole,
+    organization?.name,
+    syncStatus,
+    user,
+  ])
 
   useEffect(() => {
     if (!isPending || isTimedOut) {

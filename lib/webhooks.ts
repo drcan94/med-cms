@@ -86,13 +86,20 @@ export function getClerkUserPayload(event: ClerkUserSyncEvent): {
   lastName: string | undefined
   imageUrl: string | undefined
 } {
+  const clerkId = requireText(event.data.id, "User id")
   const primaryEmail = event.data.email_addresses?.find(
     (email) => email.id === event.data.primary_email_address_id
   )
+  const normalizedEmail = primaryEmail?.email_address?.trim()
+  const email = normalizedEmail || `${clerkId}@clerk.local`
+
+  if (!normalizedEmail) {
+    console.warn(`[WEBHOOK] ⚠️ Missing Clerk primary email for ${clerkId}, using fallback ${email}`)
+  }
 
   return {
-    clerkId: requireText(event.data.id, "User id"),
-    email: requireText(primaryEmail?.email_address, "User email"),
+    clerkId,
+    email,
     firstName: event.data.first_name ?? undefined,
     lastName: event.data.last_name ?? undefined,
     imageUrl: event.data.image_url ?? undefined,

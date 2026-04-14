@@ -163,7 +163,15 @@ function evaluatePrimitiveCondition(patient: unknown, condition: RuleCondition):
 function isCompositeCondition(
   condition: RuleCondition | CompositeCondition
 ): condition is CompositeCondition {
-  return "operator" in condition
+  if (!("operator" in condition)) {
+    return false
+  }
+
+  return (
+    condition.operator === "AND" ||
+    condition.operator === "OR" ||
+    condition.operator === "NOT"
+  )
 }
 
 /**

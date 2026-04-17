@@ -210,6 +210,11 @@ export function useLocalRoster() {
         return
       }
 
+      const rosterKey = normalizeRosterKey(identityKey)
+      if (rosterStore.patientRoster[rosterKey] === normalizedFullName) {
+        return
+      }
+
       const nextRosterStore = {
         bedRoster: rosterStore.bedRoster,
         patientRoster: {

@@ -14,6 +14,7 @@ import type * as clinicSettings from "../clinicSettings.js";
 import type * as clinicSettingsValidators from "../clinicSettingsValidators.js";
 import type * as clinicalValidators from "../clinicalValidators.js";
 import type * as organizations from "../organizations.js";
+import type * as patientMerge from "../patientMerge.js";
 import type * as patientValidators from "../patientValidators.js";
 import type * as patients from "../patients.js";
 import type * as users from "../users.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   clinicSettingsValidators: typeof clinicSettingsValidators;
   clinicalValidators: typeof clinicalValidators;
   organizations: typeof organizations;
+  patientMerge: typeof patientMerge;
   patientValidators: typeof patientValidators;
   patients: typeof patients;
   users: typeof users;

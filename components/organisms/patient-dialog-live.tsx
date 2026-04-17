@@ -337,6 +337,11 @@ export function PatientDialogLive({
     [form, getLocalPatientName]
   )
 
+  const setPatientNameRef = useRef(setPatientName)
+  setPatientNameRef.current = setPatientName
+  const getLocalPatientNameRef = useRef(getLocalPatientName)
+  getLocalPatientNameRef.current = getLocalPatientName
+
   useEffect(() => {
     if (!open) {
       return
@@ -347,12 +352,23 @@ export function PatientDialogLive({
       return
     }
     const initials = generatePatientInitials(name, locale)
-    setPatientName({
+    const bedId =
+      (livePatient ?? patient)?.bedId ?? STAGING_BED_ID
+    const stored = getLocalPatientNameRef.current({
+      bedId,
+      identifierCode: id,
+      initials,
+      patientId: (livePatient ?? patient)?._id,
+    })
+    if (stored.trim() === name) {
+      return
+    }
+    setPatientNameRef.current({
       fullName: name,
       identifierCode: id,
       initials,
     })
-  }, [open, watchedFullName, watchedIdentifierCode, locale, setPatientName])
+  }, [open, watchedFullName, watchedIdentifierCode, locale, livePatient, patient])
 
   useEffect(() => {
     if (!open || !patient?._id) {

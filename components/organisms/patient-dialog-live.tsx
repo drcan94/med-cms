@@ -47,6 +47,16 @@ type PatientFormTab = "basic" | "clinical" | "thoracic" | "meds"
 
 const AUTOSAVE_DEBOUNCE_MS = 1750
 
+/** Convex validates full nested objects; omit `{}` so optional fields stay omitted. */
+function isNonEmptyPlainObject(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value as Record<string, unknown>).length > 0
+  )
+}
+
 function hasDirtyField(d: unknown): boolean {
   if (d === true) {
     return true
@@ -521,19 +531,29 @@ export function PatientDialogLive({
         ...(patch.isPregnant !== undefined
           ? { isPregnant: patch.isPregnant }
           : {}),
-        ...(patch.anamnesis !== undefined ? { anamnesis: patch.anamnesis } : {}),
-        ...(patch.vitals !== undefined ? { vitals: normalizedVitals } : {}),
-        ...(patch.aaGradient !== undefined
+        ...(patch.anamnesis !== undefined && isNonEmptyPlainObject(patch.anamnesis)
+          ? { anamnesis: patch.anamnesis }
+          : {}),
+        ...(patch.vitals !== undefined && isNonEmptyPlainObject(patch.vitals)
+          ? { vitals: normalizedVitals }
+          : {}),
+        ...(patch.aaGradient !== undefined &&
+        isNonEmptyPlainObject(patch.aaGradient)
           ? { aaGradient: patch.aaGradient }
           : {}),
-        ...(patch.criticalMedications !== undefined
+        ...(patch.criticalMedications !== undefined &&
+        isNonEmptyPlainObject(patch.criticalMedications)
           ? { criticalMedications: patch.criticalMedications }
           : {}),
-        ...(patch.oncologyHistory !== undefined
+        ...(patch.oncologyHistory !== undefined &&
+        isNonEmptyPlainObject(patch.oncologyHistory)
           ? { oncologyHistory: normalizedOncologyHistory }
           : {}),
-        ...(patch.reports !== undefined ? { reports: patch.reports } : {}),
-        ...(patch.externalWard !== undefined
+        ...(patch.reports !== undefined && isNonEmptyPlainObject(patch.reports)
+          ? { reports: patch.reports }
+          : {}),
+        ...(patch.externalWard !== undefined &&
+        isNonEmptyPlainObject(patch.externalWard)
           ? { externalWard: patch.externalWard }
           : {}),
         ...(patch.thoracicInterventions !== undefined
@@ -616,18 +636,33 @@ export function PatientDialogLive({
       serviceName: normalizedData.serviceName || undefined,
       gender: normalizedData.gender,
       isPregnant: normalizedData.isPregnant,
-      anamnesis: normalizedData.anamnesis,
-      vitals: normalizedVitals,
-      aaGradient: normalizedData.aaGradient,
-      criticalMedications: normalizedData.criticalMedications,
-      oncologyHistory: normalizedOncologyHistory,
-      reports: normalizedData.reports,
-      externalWard: normalizedData.externalWard,
       thoracicInterventions: normalizedData.thoracicInterventions,
       labCultures: normalizedData.labCultures,
       consultations: normalizedData.consultations,
       antibiotics: normalizedData.antibiotics,
       visitNotes: normalizedData.visitNotes,
+      ...(isNonEmptyPlainObject(normalizedData.anamnesis)
+        ? { anamnesis: normalizedData.anamnesis }
+        : {}),
+      ...(isNonEmptyPlainObject(normalizedData.vitals) && normalizedVitals
+        ? { vitals: normalizedVitals }
+        : {}),
+      ...(isNonEmptyPlainObject(normalizedData.aaGradient)
+        ? { aaGradient: normalizedData.aaGradient }
+        : {}),
+      ...(isNonEmptyPlainObject(normalizedData.criticalMedications)
+        ? { criticalMedications: normalizedData.criticalMedications }
+        : {}),
+      ...(isNonEmptyPlainObject(normalizedData.oncologyHistory) &&
+      normalizedOncologyHistory
+        ? { oncologyHistory: normalizedOncologyHistory }
+        : {}),
+      ...(isNonEmptyPlainObject(normalizedData.reports)
+        ? { reports: normalizedData.reports }
+        : {}),
+      ...(isNonEmptyPlainObject(normalizedData.externalWard)
+        ? { externalWard: normalizedData.externalWard }
+        : {}),
     }
 
     setSyncState("saving")

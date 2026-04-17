@@ -6,6 +6,12 @@ function isMergeableObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+function isNonEmptyPlainObject(value: unknown): boolean {
+  return (
+    isMergeableObject(value) && Object.keys(value as Record<string, unknown>).length > 0
+  )
+}
+
 /**
  * Deep-merge plain objects; arrays and non-objects are replaced by the patch value.
  */
@@ -104,13 +110,21 @@ export function mergePatientFromPatch(
     "externalWard",
   ]
   for (const key of deepMergeKeys) {
-    if (patch[key] !== undefined) {
-      const merged = deepMergePlain(
-        (existing[key] ?? undefined) as Record<string, unknown> | undefined,
-        patch[key] as Record<string, unknown>
-      )
-      ;(next as Record<string, unknown>)[key as string] = merged
+    const patchVal = patch[key]
+    if (patchVal === undefined) {
+      continue
     }
+    if (isMergeableObject(patchVal) && !isNonEmptyPlainObject(patchVal)) {
+      continue
+    }
+    const merged = deepMergePlain(
+      (existing[key] ?? undefined) as Record<string, unknown> | undefined,
+      patchVal as Record<string, unknown>
+    )
+    if (merged === undefined || !isNonEmptyPlainObject(merged)) {
+      continue
+    }
+    ;(next as Record<string, unknown>)[key as string] = merged
   }
 
   const arrayReplaceKeys: (keyof PatientUpsertPatch)[] = [

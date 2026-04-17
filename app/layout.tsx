@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
+import { enUS, trTR } from "@clerk/localizations"
 import { Geist_Mono, Inter } from "next/font/google"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getMessages } from "next-intl/server"
@@ -38,9 +39,11 @@ export default async function RootLayout({
 }>) {
   const [locale, messages] = await Promise.all([getLocale(), getMessages()])
   const authPathnames = getAuthPathnames(locale)
+  const clerkLocalization = locale === "tr" ? trTR : enUS
 
   return (
     <ClerkProvider
+      localization={clerkLocalization}
       afterSignOutUrl={authPathnames.signIn}
       signInFallbackRedirectUrl={authPathnames.patients}
       signInUrl={authPathnames.signIn}

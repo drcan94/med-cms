@@ -1,0 +1,750 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation, useQuery } from "convex/react"
+import { Activity, Cloud, CloudOff, Pill, Stethoscope, User, X } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
+import { toast } from "sonner"
+
+import { api } from "@/convex/_generated/api"
+import type { Doc, Id } from "@/convex/_generated/dataModel"
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback"
+import { useLocalRoster } from "@/hooks/useLocalRoster"
+import { usePatientSheetBedOptions } from "@/hooks/usePatientSheetBedOptions"
+import type { AppLocale } from "@/i18n/routing"
+import { parseConventionRules } from "@/lib/clinic-settings"
+import { defaultClinicalRules, evaluateClinicalRules } from "@/lib/clinical-rules"
+import { formatDateForInput, toClinicalIsoDate } from "@/lib/patient-form"
+import { sanitizeIdentifierCodeInput } from "@/lib/patient-identity"
+import { generatePatientInitials, STAGING_BED_ID } from "@/lib/patient-privacy"
+import { evaluatePatientRules } from "@/lib/rule-engine"
+import { patientFormSchema, type PatientFormData } from "@/lib/schemas/patient-form.schema"
+import { ClinicalAlertsPanel, ClinicalAlertsSummary } from "@/components/molecules/clinical-alerts-panel"
+import { PatientClinicalRequirementsAlert } from "@/components/molecules/patient-clinical-requirements-alert"
+import {
+  BasicInfoSection,
+  MedicationsLabsSection,
+  ThoracicInterventionsSection,
+  VitalsAnamnesisSection,
+} from "@/components/organisms/patient-form-sections"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+type PatientRecord = Doc<"patients">
+type PatientFormTab = "basic" | "clinical" | "thoracic" | "meds"
+
+const AUTOSAVE_DEBOUNCE_MS = 750
+
+function shouldSaveImmediately(fieldName?: string): boolean {
+  if (!fieldName) {
+    return false
+  }
+  if (fieldName.includes("symptoms")) {
+    return true
+  }
+  if (
+    fieldName === "gender" ||
+    fieldName === "isPregnant" ||
+    fieldName === "bedId"
+  ) {
+    return true
+  }
+  if (
+    fieldName.startsWith("thoracicInterventions") ||
+    fieldName.startsWith("labCultures") ||
+    fieldName.startsWith("antibiotics") ||
+    fieldName.startsWith("consultations") ||
+    fieldName.startsWith("visitNotes")
+  ) {
+    return true
+  }
+  if (fieldName.startsWith("criticalMedications")) {
+    return true
+  }
+  if (fieldName.startsWith("oncologyHistory") && fieldName.includes("received")) {
+    return true
+  }
+  return false
+}
+
+function canPersistNewPatient(data: PatientFormData): boolean {
+  const fullName = data.fullName?.trim() ?? ""
+  const id = sanitizeIdentifierCodeInput(data.identifierCode)
+  const diagnosis = data.diagnosis?.trim() ?? ""
+  const admission = data.admissionDate?.trim() ?? ""
+  return (
+    fullName.length > 0 &&
+    id.length === 6 &&
+    diagnosis.length > 0 &&
+    admission.length > 0
+  )
+}
+
+function getDefaultFormValues(
+  patient: PatientRecord | null,
+  fullName: string
+): PatientFormData {
+  return {
+    fullName,
+    identifierCode: patient?.identifierCode ?? "",
+    bedId: patient?.bedId ?? STAGING_BED_ID,
+    serviceName: patient?.serviceName ?? "",
+    diagnosis: patient?.diagnosis ?? "",
+    admissionDate: formatDateForInput(patient?.admissionDate) ?? "",
+    surgeryDate: formatDateForInput(patient?.surgeryDate) ?? "",
+    procedureName: patient?.procedureName ?? "",
+    gender: patient?.gender,
+    isPregnant: patient?.isPregnant,
+    version: patient?.version,
+    anamnesis: patient?.anamnesis,
+    vitals: patient?.vitals,
+    aaGradient: patient?.aaGradient,
+    criticalMedications: patient?.criticalMedications,
+    oncologyHistory: patient?.oncologyHistory,
+    reports: patient?.reports,
+    externalWard: patient?.externalWard,
+    thoracicInterventions: patient?.thoracicInterventions ?? [],
+    labCultures: patient?.labCultures ?? [],
+    consultations: patient?.consultations ?? [],
+    antibiotics: patient?.antibiotics ?? [],
+    visitNotes: patient?.visitNotes ?? [],
+  }
+}
+
+export type PatientDialogLiveProps = {
+  onOpenChange: (open: boolean) => void
+  open: boolean
+  organizationId?: string | null
+  patient: PatientRecord | null
+  userId?: string | null
+}
+
+export function PatientDialogLive({
+  onOpenChange,
+  open,
+  organizationId,
+  patient,
+  userId,
+}: Readonly<PatientDialogLiveProps>) {
+  const locale = useLocale() as AppLocale
+  const t = useTranslations("PatientSheet")
+  const tTabs = useTranslations("PatientFormTabs")
+  const { getLocalPatientName, setPatientName } = useLocalRoster()
+  const [loadingItem, setLoadingItem] = useState<string | null>(null)
+  const [createdPatientId, setCreatedPatientId] = useState<Id<"patients"> | null>(
+    null
+  )
+  const [syncState, setSyncState] = useState<"idle" | "saving" | "saved">(
+    "idle"
+  )
+  const [activeTab, setActiveTab] = useState<PatientFormTab>("basic")
+
+  const isApplyingRemoteRef = useRef(false)
+  const suppressAutosaveRef = useRef(false)
+  /** Avoid firing upsert on mount when RHF watch emits the initial snapshot. */
+  const autosaveReadyRef = useRef(false)
+  const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
+  const persistGenerationRef = useRef(0)
+
+  const upsertPatient = useMutation(api.patients.upsertPatient)
+  const toggleRequirement = useMutation(api.patients.toggleClinicalRequirement)
+  const addTodo = useMutation(api.patients.addCustomTodo)
+  const toggleTodo = useMutation(api.patients.toggleCustomTodo)
+  const deleteTodo = useMutation(api.patients.deleteCustomTodo)
+
+  const effectivePatientId = patient?._id ?? createdPatientId
+  const isEditingExisting = Boolean(effectivePatientId)
+
+  const initialFullName = patient
+    ? getLocalPatientName({
+        bedId: patient.bedId,
+        identifierCode: patient.identifierCode,
+        initials: patient.initials,
+        patientId: patient._id,
+      })
+    : ""
+
+  const form = useForm<PatientFormData>({
+    delayError: 700,
+    mode: "onSubmit",
+    reValidateMode: "onBlur",
+    resolver: zodResolver(patientFormSchema),
+    defaultValues: getDefaultFormValues(patient, initialFullName),
+  })
+
+  const livePatient = useQuery(
+    api.patients.getPatientByOrganization,
+    open && organizationId && effectivePatientId
+      ? { organizationId, patientId: effectivePatientId }
+      : "skip"
+  ) as PatientRecord | null | undefined
+
+  const clinicSettings = useQuery(
+    api.clinicSettings.getClinicSettings,
+    open && organizationId ? { organizationId } : "skip"
+  )
+  const patients = useQuery(
+    api.patients.getPatientsByOrganization,
+    open && organizationId ? { organizationId } : "skip"
+  ) as PatientRecord[] | undefined
+
+  const bedOptions = usePatientSheetBedOptions({
+    currentPatient: livePatient ?? patient,
+    patients,
+    t,
+    wardLayout: clinicSettings?.wardLayout,
+  })
+
+  const watchedFullName = form.watch("fullName")
+  const watchedDiagnosis = form.watch("diagnosis")
+  const watchedProcedure = form.watch("procedureName")
+
+  const initialsPreview = useMemo(() => {
+    if (watchedFullName?.trim()) {
+      return generatePatientInitials(watchedFullName, locale)
+    }
+    return (livePatient ?? patient)?.initials ?? ""
+  }, [watchedFullName, livePatient, patient, locale])
+
+  const conventionRules = useMemo(
+    () => parseConventionRules(clinicSettings?.conventions),
+    [clinicSettings?.conventions]
+  )
+
+  const matchedClinicalItems = useMemo(
+    () =>
+      evaluatePatientRules(
+        {
+          diagnosis: watchedDiagnosis ?? "",
+          procedureName: watchedProcedure?.trim() || undefined,
+        },
+        conventionRules
+      ),
+    [conventionRules, watchedDiagnosis, watchedProcedure]
+  )
+
+  const currentFormData = form.watch()
+
+  const clinicalEvaluation = useMemo(
+    () => evaluateClinicalRules(currentFormData, defaultClinicalRules),
+    [currentFormData]
+  )
+
+  const hasClinicalAlerts =
+    clinicalEvaluation.blocks.length > 0 ||
+    clinicalEvaluation.warnings.length > 0 ||
+    clinicalEvaluation.requirements.length > 0
+
+  const hasRequirements =
+    matchedClinicalItems.length > 0 ||
+    ((livePatient ?? patient)?.completedRequirements?.length ?? 0) > 0 ||
+    ((livePatient ?? patient)?.customTodos?.length ?? 0) > 0
+
+  const rosterPatient = livePatient ?? patient
+
+  const applyPatientToForm = useCallback(
+    (record: PatientRecord) => {
+      const fullName = getLocalPatientName({
+        bedId: record.bedId,
+        identifierCode: record.identifierCode,
+        initials: record.initials,
+        patientId: record._id,
+      })
+      suppressAutosaveRef.current = true
+      isApplyingRemoteRef.current = true
+      form.reset(getDefaultFormValues(record, fullName))
+      setTimeout(() => {
+        isApplyingRemoteRef.current = false
+        suppressAutosaveRef.current = false
+      }, 0)
+    },
+    [form, getLocalPatientName]
+  )
+
+  useEffect(() => {
+    if (!open || !patient?._id) {
+      setCreatedPatientId(null)
+    }
+  }, [open, patient?._id])
+
+  useEffect(() => {
+    if (!open || !livePatient || isApplyingRemoteRef.current) {
+      return
+    }
+    const formVersion = form.getValues("version") ?? 0
+    const liveVersion = livePatient.version ?? 0
+    if (liveVersion !== formVersion) {
+      applyPatientToForm(livePatient)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-sync when server snapshot changes
+  }, [open, livePatient, applyPatientToForm])
+
+  const showSavedIndicator = useCallback(() => {
+    if (savedIndicatorTimerRef.current) {
+      clearTimeout(savedIndicatorTimerRef.current)
+    }
+    setSyncState("saved")
+    savedIndicatorTimerRef.current = setTimeout(() => {
+      setSyncState("idle")
+      savedIndicatorTimerRef.current = null
+    }, 2000)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (savedIndicatorTimerRef.current) {
+        clearTimeout(savedIndicatorTimerRef.current)
+      }
+    },
+    []
+  )
+
+  const persist = useCallback(async () => {
+    if (
+      !organizationId ||
+      !userId ||
+      !autosaveReadyRef.current ||
+      isApplyingRemoteRef.current ||
+      suppressAutosaveRef.current
+    ) {
+      return
+    }
+
+    const data = form.getValues()
+    const gen = ++persistGenerationRef.current
+
+    if (!effectivePatientId && !canPersistNewPatient(data)) {
+      return
+    }
+
+    const normalizedData = data
+    const fullName = data.fullName?.trim() ?? ""
+    const initials = fullName
+      ? generatePatientInitials(fullName, locale)
+      : (livePatient ?? patient)?.initials ?? ""
+
+    const fallbackRecordedAt = new Date().toISOString()
+    const normalizedVitals = normalizedData.vitals
+      ? {
+          ...normalizedData.vitals,
+          recordedAt:
+            normalizedData.vitals.recordedAt ?? fallbackRecordedAt,
+        }
+      : undefined
+    const normalizedOncologyHistory = normalizedData.oncologyHistory
+      ? {
+          chemotherapy: normalizedData.oncologyHistory.chemotherapy
+            ? {
+                ...normalizedData.oncologyHistory.chemotherapy,
+                received:
+                  normalizedData.oncologyHistory.chemotherapy.received ??
+                  false,
+              }
+            : undefined,
+          radiotherapy: normalizedData.oncologyHistory.radiotherapy
+            ? {
+                ...normalizedData.oncologyHistory.radiotherapy,
+                received:
+                  normalizedData.oncologyHistory.radiotherapy.received ??
+                  false,
+              }
+            : undefined,
+        }
+      : undefined
+
+    setSyncState("saving")
+
+    try {
+      const result = await upsertPatient({
+        patientId: effectivePatientId ?? undefined,
+        organizationId,
+        userId,
+        initials,
+        identifierCode: sanitizeIdentifierCodeInput(
+          normalizedData.identifierCode
+        ),
+        bedId: normalizedData.bedId || STAGING_BED_ID,
+        diagnosis: normalizedData.diagnosis,
+        admissionDate: toClinicalIsoDate(normalizedData.admissionDate),
+        surgeryDate: normalizedData.surgeryDate
+          ? toClinicalIsoDate(normalizedData.surgeryDate)
+          : undefined,
+        procedureName: normalizedData.procedureName || undefined,
+        serviceName: normalizedData.serviceName || undefined,
+        version: isEditingExisting
+          ? (normalizedData.version ?? (livePatient ?? patient)?.version ?? 0)
+          : undefined,
+        gender: normalizedData.gender,
+        isPregnant: normalizedData.isPregnant,
+        anamnesis: normalizedData.anamnesis,
+        vitals: normalizedVitals,
+        aaGradient: normalizedData.aaGradient,
+        criticalMedications: normalizedData.criticalMedications,
+        oncologyHistory: normalizedOncologyHistory,
+        reports: normalizedData.reports,
+        externalWard: normalizedData.externalWard,
+        thoracicInterventions: normalizedData.thoracicInterventions,
+        labCultures: normalizedData.labCultures,
+        consultations: normalizedData.consultations,
+        antibiotics: normalizedData.antibiotics,
+        visitNotes: normalizedData.visitNotes,
+      })
+
+      if (gen !== persistGenerationRef.current) {
+        return
+      }
+
+      if (!effectivePatientId && result.patientId) {
+        setCreatedPatientId(result.patientId)
+      }
+
+      form.setValue("version", result.version, { shouldDirty: false })
+
+      if (fullName) {
+        setPatientName({
+          fullName,
+          identifierCode: data.identifierCode,
+          initials,
+        })
+      }
+
+      showSavedIndicator()
+    } catch (error) {
+      if (gen !== persistGenerationRef.current) {
+        return
+      }
+
+      setSyncState("idle")
+
+      if (error instanceof Error) {
+        if (error.message.startsWith("CONFLICT:")) {
+          toast.info(t("toasts.conflict"), {
+            description: t("toasts.conflictLiveMerge"),
+          })
+          if (livePatient) {
+            applyPatientToForm(livePatient)
+          }
+          return
+        }
+        if (error.message === "TRIAL_LIMIT_REACHED") {
+          toast.error(t("toasts.trialLimitReached"))
+          return
+        }
+
+        toast.error(t("toasts.saveError"), {
+          description: error.message,
+        })
+        return
+      }
+      toast.error(t("toasts.saveError"))
+    }
+  }, [
+    organizationId,
+    userId,
+    effectivePatientId,
+    isEditingExisting,
+    livePatient,
+    patient,
+    form,
+    locale,
+    upsertPatient,
+    setPatientName,
+    showSavedIndicator,
+    applyPatientToForm,
+    t,
+  ])
+
+  const { run: debouncedPersist, cancel: cancelDebounced } = useDebouncedCallback(
+    persist,
+    AUTOSAVE_DEBOUNCE_MS
+  )
+
+  useEffect(() => {
+    if (!open) {
+      cancelDebounced()
+      autosaveReadyRef.current = false
+      return
+    }
+    autosaveReadyRef.current = false
+    const readyId = window.setTimeout(() => {
+      autosaveReadyRef.current = true
+    }, 400)
+    return () => {
+      window.clearTimeout(readyId)
+    }
+  }, [open, cancelDebounced])
+
+  useEffect(() => {
+    const subscription = form.watch((_, info) => {
+      if (
+        !open ||
+        !autosaveReadyRef.current ||
+        isApplyingRemoteRef.current ||
+        suppressAutosaveRef.current
+      ) {
+        return
+      }
+      const name = info?.name
+      if (shouldSaveImmediately(name)) {
+        cancelDebounced()
+        queueMicrotask(() => {
+          void persist()
+        })
+      } else {
+        debouncedPersist()
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [form, debouncedPersist, cancelDebounced, persist, open])
+
+  const handleToggleRequirement = async (item: string, completed: boolean) => {
+    if (!effectivePatientId || !organizationId || !userId) {
+      return
+    }
+    setLoadingItem(item)
+    try {
+      await toggleRequirement({
+        completed,
+        item,
+        organizationId,
+        patientId: effectivePatientId,
+        userId,
+      })
+      toast.success(
+        completed
+          ? t("clinicalRequirements.toasts.completed", { item })
+          : t("clinicalRequirements.toasts.uncompleted", { item })
+      )
+    } catch {
+      toast.error(t("clinicalRequirements.toasts.error"))
+    } finally {
+      setLoadingItem(null)
+    }
+  }
+
+  const handleAddTodo = async (text: string) => {
+    if (!effectivePatientId || !organizationId || !userId) {
+      return
+    }
+    try {
+      await addTodo({
+        organizationId,
+        patientId: effectivePatientId,
+        text,
+        userId,
+      })
+      toast.success(t("clinicalRequirements.toasts.todoAdded"))
+    } catch {
+      toast.error(t("clinicalRequirements.toasts.error"))
+    }
+  }
+
+  const handleToggleTodo = async (todoId: string, completed: boolean) => {
+    if (!effectivePatientId || !organizationId || !userId) {
+      return
+    }
+    setLoadingItem(todoId)
+    try {
+      await toggleTodo({
+        completed,
+        organizationId,
+        patientId: effectivePatientId,
+        todoId,
+        userId,
+      })
+    } catch {
+      toast.error(t("clinicalRequirements.toasts.error"))
+    } finally {
+      setLoadingItem(null)
+    }
+  }
+
+  const handleDeleteTodo = async (todoId: string) => {
+    if (!effectivePatientId || !organizationId || !userId) {
+      return
+    }
+    setLoadingItem(todoId)
+    try {
+      await deleteTodo({
+        organizationId,
+        patientId: effectivePatientId,
+        todoId,
+        userId,
+      })
+      toast.success(t("clinicalRequirements.toasts.todoDeleted"))
+    } catch {
+      toast.error(t("clinicalRequirements.toasts.error"))
+    } finally {
+      setLoadingItem(null)
+    }
+  }
+
+  const handleClose = () => {
+    cancelDebounced()
+    onOpenChange(false)
+  }
+
+  return (
+    <form
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
+      onSubmit={(e) => {
+        e.preventDefault()
+      }}
+    >
+      <DialogHeader className="shrink-0 border-b px-4 py-3 sm:px-5 sm:py-3.5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">
+                {t(isEditingExisting ? "badges.live" : "badges.new")}
+              </Badge>
+              <Badge variant="outline">{t("badges.privacy")}</Badge>
+            </div>
+            <DialogTitle>
+              {t(isEditingExisting ? "titles.live" : "titles.new")}
+            </DialogTitle>
+            <DialogDescription className="mt-1 leading-6">
+              {t("description")}
+            </DialogDescription>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <div
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              aria-live="polite"
+            >
+              {syncState === "saving" ? (
+                <>
+                  <Cloud className="size-3.5 animate-pulse opacity-80" />
+                  <span>{t("syncStatus.saving")}</span>
+                </>
+              ) : syncState === "saved" ? (
+                <>
+                  <Cloud className="size-3.5 text-emerald-600/90" />
+                  <span className="text-emerald-700/90 dark:text-emerald-400/90">
+                    {t("syncStatus.saved")}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CloudOff className="size-3.5 opacity-50" />
+                  <span className="opacity-70">{t("syncStatus.idle")}</span>
+                </>
+              )}
+            </div>
+            <Button variant="ghost" size="icon-sm" type="button" onClick={handleClose}>
+              <X className="size-4" />
+              <span className="sr-only">{t("actions.close")}</span>
+            </Button>
+          </div>
+        </div>
+      </DialogHeader>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as PatientFormTab)}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            {hasClinicalAlerts && (
+              <div className="shrink-0 border-b bg-muted/30 px-4 py-2.5 sm:px-5">
+                <ClinicalAlertsPanel evaluation={clinicalEvaluation} compact />
+              </div>
+            )}
+
+            <div className="shrink-0 border-b px-0">
+              <div className="scrollbar-hide touch-pan-x overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]">
+                <TabsList className="inline-flex h-auto w-max justify-start gap-0.5 rounded-none bg-transparent px-4 py-0 sm:gap-1 sm:px-5">
+                  <TabsTrigger
+                    value="basic"
+                    className="flex-none shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  >
+                    <User className="size-3.5 shrink-0" />
+                    {tTabs("basic")}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="clinical"
+                    className="flex-none shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  >
+                    <Activity className="size-3.5 shrink-0" />
+                    {tTabs("clinical")}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="thoracic"
+                    className="flex-none shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  >
+                    <Stethoscope className="size-3.5 shrink-0" />
+                    {tTabs("thoracic")}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="meds"
+                    className="flex-none shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  >
+                    <Pill className="size-3.5 shrink-0" />
+                    {tTabs("meds")}
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+              <TabsContent value="basic" className="m-0">
+                <BasicInfoSection
+                  control={form.control}
+                  bedOptions={bedOptions}
+                  initialsPreview={initialsPreview}
+                />
+              </TabsContent>
+
+              <TabsContent value="clinical" className="m-0">
+                <VitalsAnamnesisSection
+                  control={form.control}
+                  defaultPatmMmHg={clinicSettings?.defaultPatmMmHg}
+                  setValue={form.setValue}
+                  watch={form.watch}
+                />
+              </TabsContent>
+
+              <TabsContent value="thoracic" className="m-0">
+                <ThoracicInterventionsSection control={form.control} />
+              </TabsContent>
+
+              <TabsContent value="meds" className="m-0">
+                <MedicationsLabsSection
+                  control={form.control}
+                  setValue={form.setValue}
+                  watch={form.watch}
+                />
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+
+        {hasRequirements && (
+          <div className="hidden w-80 shrink-0 overflow-y-auto overscroll-contain border-l bg-muted/20 p-3 lg:block xl:w-96">
+            <PatientClinicalRequirementsAlert
+              completedRequirements={rosterPatient?.completedRequirements}
+              customTodos={rosterPatient?.customTodos}
+              items={matchedClinicalItems}
+              loading={loadingItem}
+              onAddTodo={isEditingExisting ? handleAddTodo : undefined}
+              onDeleteTodo={isEditingExisting ? handleDeleteTodo : undefined}
+              onToggle={isEditingExisting ? handleToggleRequirement : undefined}
+              onToggleTodo={isEditingExisting ? handleToggleTodo : undefined}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="shrink-0 border-t px-4 py-3 sm:px-5 sm:py-3.5">
+        <ClinicalAlertsSummary evaluation={clinicalEvaluation} />
+      </div>
+    </form>
+  )
+}

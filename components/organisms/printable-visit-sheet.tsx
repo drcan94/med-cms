@@ -1,94 +1,160 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 
 import { formatCompactBedDisplay } from "@/lib/ward-layout"
 import { STAGING_BED_ID } from "@/lib/patient-privacy"
 import type { VisitSheetEntry } from "@/lib/visit-sheet"
+import type { AppLocale } from "@/i18n/routing"
 
 type PrintableVisitSheetProps = {
   patients: VisitSheetEntry[]
 }
 
-const SIDE_LABELS: Record<string, string> = {
-  right: "Sğ",
-  left: "Sl",
-  bilateral: "Bil",
+type PrintT = ReturnType<typeof useTranslations<"PrintableVisitSheet">>
+
+function printSideLabel(side: string, t: PrintT): string {
+  switch (side) {
+    case "right":
+      return t("printSides.right")
+    case "left":
+      return t("printSides.left")
+    case "bilateral":
+      return t("printSides.bilateral")
+    default:
+      return side
+  }
 }
 
-const CULTURE_TYPE_LABELS: Record<string, string> = {
-  blood_culture: "Kan K.",
-  urine_culture: "İdrar K.",
-  sputum_culture: "Balgam K.",
-  fluid_culture: "Sıvı K.",
-  fluid_biochemistry: "Sıvı BK",
-  cytology: "Sitoloji",
+function printThoracicTypeLabel(type: string, t: PrintT): string {
+  switch (type) {
+    case "chest_tube":
+      return t("printThoracicTypes.chest_tube")
+    case "drain":
+      return t("printThoracicTypes.drain")
+    default:
+      return type
+  }
+}
+
+function printCultureLabel(type: string, t: PrintT): string {
+  switch (type) {
+    case "blood_culture":
+      return t("cultureTypes.blood_culture")
+    case "urine_culture":
+      return t("cultureTypes.urine_culture")
+    case "sputum_culture":
+      return t("cultureTypes.sputum_culture")
+    case "fluid_culture":
+      return t("cultureTypes.fluid_culture")
+    case "fluid_biochemistry":
+      return t("cultureTypes.fluid_biochemistry")
+    case "cytology":
+      return t("cultureTypes.cytology")
+    default:
+      return type
+  }
 }
 
 function formatInterventionSummary(
-  interventions: VisitSheetEntry["interventions"]
+  interventions: VisitSheetEntry["interventions"],
+  t: PrintT
 ): string {
   const active = interventions.filter((i) => i.isActive)
   if (active.length === 0) return ""
 
   return active
     .map((i) => {
-      const side = SIDE_LABELS[i.side] ?? i.side
-      const type = i.type === "chest_tube" ? "Tüp" : "Dren"
-      const drainage = i.latestDrainage !== undefined ? ` ${i.latestDrainage}cc` : ""
-      return `${side} ${type} ${i.size} (G${i.dayCount})${drainage}`
+      const side = printSideLabel(i.side, t)
+      const type = printThoracicTypeLabel(i.type, t)
+      const dayBadge = t("dayBadge", { day: i.dayCount })
+      const drainage =
+        i.latestDrainage !== undefined
+          ? t("drainagePart", { value: i.latestDrainage })
+          : ""
+      return t("interventionSummary", {
+        side,
+        type,
+        size: i.size,
+        dayBadge,
+        drainage,
+      })
     })
     .join("\n")
 }
 
 function formatAntibioticSummary(
-  antibiotics: VisitSheetEntry["antibiotics"]
+  antibiotics: VisitSheetEntry["antibiotics"],
+  t: PrintT
 ): string {
   const active = antibiotics.filter((a) => a.isActive)
   if (active.length === 0) return ""
 
-  return active.map((a) => `${a.name} G${a.dayCount}`).join(", ")
+  return active
+    .map((a) =>
+      t("antibioticSummary", {
+        name: a.name,
+        dayBadge: t("dayBadge", { day: a.dayCount }),
+      })
+    )
+    .join(", ")
 }
 
 function formatPendingCulturesSummary(
-  cultures: VisitSheetEntry["pendingCultures"]
+  cultures: VisitSheetEntry["pendingCultures"],
+  t: PrintT
 ): string {
   if (cultures.length === 0) return ""
 
-  return cultures.map((c) => CULTURE_TYPE_LABELS[c.type] ?? c.type).join(", ")
+  return cultures.map((c) => printCultureLabel(c.type, t)).join(", ")
 }
 
-function formatVitalsSummary(vitals: VisitSheetEntry["vitals"]): string {
+function formatVitalsSummary(
+  vitals: VisitSheetEntry["vitals"],
+  t: PrintT
+): string {
   if (!vitals) return ""
 
   const alerts: string[] = []
-  if (vitals.isFebrile) alerts.push(`T:${vitals.temperature}°`)
-  if (vitals.isHypoxic) alerts.push(`SpO2:${vitals.spO2}%`)
-  if (vitals.isTachycardic) alerts.push(`P:${vitals.pulse}`)
+  if (vitals.isFebrile) {
+    alerts.push(t("vitals.alertFebrile", { temperature: vitals.temperature }))
+  }
+  if (vitals.isHypoxic) {
+    alerts.push(t("vitals.alertHypoxic", { spO2: vitals.spO2 }))
+  }
+  if (vitals.isTachycardic) {
+    alerts.push(t("vitals.alertTachycardic", { pulse: vitals.pulse }))
+  }
 
   if (alerts.length > 0) {
     return alerts.join(" ")
   }
 
-  return `${vitals.bloodPressure} P:${vitals.pulse} SpO2:${vitals.spO2}%`
+  return t("vitals.line", {
+    bloodPressure: vitals.bloodPressure,
+    pulse: vitals.pulse,
+    spO2: vitals.spO2,
+  })
 }
 
 function formatTodosSummary(
   customTodos: VisitSheetEntry["customTodos"]
 ): string {
   const todos = customTodos ?? []
-  const pending = todos.filter((t) => !t.completed)
+  const pending = todos.filter((todo) => !todo.completed)
 
   if (pending.length === 0) return ""
 
-  return pending.map((t) => `• ${t.text}`).join("\n")
+  return pending.map((todo) => `• ${todo.text}`).join("\n")
 }
 
 export function PrintableVisitSheet({
   patients,
 }: Readonly<PrintableVisitSheetProps>) {
   const t = useTranslations("PrintableVisitSheet")
-  const today = new Date().toLocaleDateString("tr-TR", {
+  const locale = useLocale() as AppLocale
+  const localeTag = locale === "tr" ? "tr-TR" : "en-US"
+  const today = new Date().toLocaleDateString(localeTag, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -149,10 +215,19 @@ export function PrintableVisitSheet({
                       )
                     : patient.bedDisplay
 
-              const interventionText = formatInterventionSummary(patient.interventions)
-              const antibioticText = formatAntibioticSummary(patient.antibiotics)
-              const cultureText = formatPendingCulturesSummary(patient.pendingCultures)
-              const vitalsText = formatVitalsSummary(patient.vitals)
+              const interventionText = formatInterventionSummary(
+                patient.interventions,
+                t
+              )
+              const antibioticText = formatAntibioticSummary(
+                patient.antibiotics,
+                t
+              )
+              const cultureText = formatPendingCulturesSummary(
+                patient.pendingCultures,
+                t
+              )
+              const vitalsText = formatVitalsSummary(patient.vitals, t)
               const todosText = formatTodosSummary(patient.customTodos)
 
               const medsLabContent = [antibioticText, cultureText].filter(Boolean).join("\n")
@@ -174,7 +249,7 @@ export function PrintableVisitSheet({
                     <div>{patient.diagnosis}</div>
                     {patient.procedureName && (
                       <div className="mt-0.5 text-[9px] font-medium text-gray-700">
-                        Op: {patient.procedureName}
+                        {t("procedureBadge", { procedure: patient.procedureName })}
                       </div>
                     )}
                   </td>

@@ -237,6 +237,55 @@ export function useLocalRoster() {
     }
   }, [])
 
+  const bulkUpdateRoster = useCallback(
+    (mappings: LocalRoster) => {
+      const nextPatient = sanitizeRoster(mappings)
+      if (
+        Object.keys(nextPatient).length === 0 ||
+        typeof window === "undefined"
+      ) {
+        return
+      }
+
+      const nextRosterStore = {
+        bedRoster: rosterStore.bedRoster,
+        patientRoster: {
+          ...rosterStore.patientRoster,
+          ...nextPatient,
+        },
+      } satisfies LocalRosterStore
+      const serializedRoster = JSON.stringify(nextRosterStore)
+
+      cacheRosterStore(serializedRoster, nextRosterStore)
+      window.localStorage.setItem(LOCAL_ROSTER_STORAGE_KEY, serializedRoster)
+      emitRosterChange()
+    },
+    [rosterStore.bedRoster, rosterStore.patientRoster]
+  )
+
+  const bulkUpdateBedRoster = useCallback(
+    (mappings: LocalRoster) => {
+      const nextBed = sanitizeRoster(mappings)
+      if (Object.keys(nextBed).length === 0 || typeof window === "undefined") {
+        return
+      }
+
+      const nextRosterStore = {
+        bedRoster: {
+          ...rosterStore.bedRoster,
+          ...nextBed,
+        },
+        patientRoster: rosterStore.patientRoster,
+      } satisfies LocalRosterStore
+      const serializedRoster = JSON.stringify(nextRosterStore)
+
+      cacheRosterStore(serializedRoster, nextRosterStore)
+      window.localStorage.setItem(LOCAL_ROSTER_STORAGE_KEY, serializedRoster)
+      emitRosterChange()
+    },
+    [rosterStore.bedRoster, rosterStore.patientRoster]
+  )
+
   const getLocalPatientName = useCallback(
     (lookup: PatientNameLookup) => resolveStoredPatientName(rosterStore, lookup) ?? "",
     [rosterStore]
@@ -259,6 +308,8 @@ export function useLocalRoster() {
       Object.keys(rosterStore.patientRoster).length,
     setRoster,
     setPatientName,
+    bulkUpdateRoster,
+    bulkUpdateBedRoster,
     clearRoster,
     getLocalPatientName,
     getFullPatientName,

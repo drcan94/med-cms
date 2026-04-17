@@ -86,6 +86,24 @@ export const getPatientCount = query({
   },
 })
 
+/** Single patient for live dashboard subscription (org-scoped). */
+export const getPatientByOrganization = query({
+  args: {
+    organizationId: v.string(),
+    patientId: v.id("patients"),
+  },
+  handler: async (ctx, args) => {
+    await requireOrgMembership(ctx, args.organizationId)
+
+    const patient = await ctx.db.get(args.patientId)
+    if (!patient || patient.organizationId !== args.organizationId) {
+      return null
+    }
+
+    return patient
+  },
+})
+
 export const upsertPatient = mutation({
   args: {
     patientId: v.optional(v.id("patients")),
@@ -157,6 +175,7 @@ export const upsertPatient = mutation({
 
     let patientId = args.patientId
     let action = `patient.created:${patientFields.bedId}`
+    let savedVersion = 1
 
     if (patientId) {
       const existingPatient = await ctx.db.get(patientId)
@@ -179,6 +198,7 @@ export const upsertPatient = mutation({
       }
 
       const nextVersion = serverVersion + 1
+      savedVersion = nextVersion
 
       await ctx.db.patch(patientId, {
         ...patientFields,
@@ -230,6 +250,7 @@ export const upsertPatient = mutation({
     return {
       action,
       patientId,
+      version: savedVersion,
     }
   },
 })

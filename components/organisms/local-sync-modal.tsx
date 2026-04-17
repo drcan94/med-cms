@@ -1,14 +1,14 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { CheckCircle2, FileSpreadsheet, ShieldCheck, Trash2, UploadCloud } from "lucide-react"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import Papa from "papaparse"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
@@ -20,11 +20,22 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useLocalRoster } from "@/hooks/useLocalRoster"
-import { buildRosterFromCsv } from "@/lib/local-roster-csv"
+import {
+  buildRosterFromCsv,
+  CSV_ERROR_MISSING_COLUMNS,
+  CSV_ERROR_NO_VALID_ROWS,
+} from "@/lib/local-roster-csv"
+import type { PatientPrivacyLocale } from "@/lib/patient-privacy"
 import { cn } from "@/lib/utils"
+import type { VariantProps } from "class-variance-authority"
 
 type StatusTone = "default" | "error" | "success"
-type LocalSyncModalProps = { triggerLabel?: string }
+type LocalSyncModalProps = {
+  triggerLabel?: string
+  triggerVariant?: VariantProps<typeof buttonVariants>["variant"]
+  triggerSize?: VariantProps<typeof buttonVariants>["size"]
+  triggerClassName?: string
+}
 
 function getLocalSyncErrorMessage(
   error: unknown,
@@ -37,17 +48,24 @@ function getLocalSyncErrorMessage(
   switch (error.message) {
     case "CSV_PARSE_FAILED":
       return t("errors.parseFailed")
-    case 'CSV must include "Patient Name" plus either "Bed Number" or both "Initials" and "Identifier Code" columns.':
+    case CSV_ERROR_MISSING_COLUMNS:
       return t("errors.missingColumns")
-    case "No valid patient rows were found in the uploaded CSV.":
+    case CSV_ERROR_NO_VALID_ROWS:
       return t("errors.noValidRows")
     default:
       return error.message
   }
 }
 
-export function LocalSyncModal({ triggerLabel }: Readonly<LocalSyncModalProps>) {
+export function LocalSyncModal({
+  triggerLabel,
+  triggerVariant = "default",
+  triggerSize = "default",
+  triggerClassName,
+}: Readonly<LocalSyncModalProps>) {
   const t = useTranslations("LocalSyncModal")
+  const locale = useLocale()
+  const privacyLocale: PatientPrivacyLocale = locale === "tr" ? "tr" : "en"
   const defaultStatusMessage = t("status.default")
   const resolvedTriggerLabel = triggerLabel ?? t("trigger")
   const [isOpen, setIsOpen] = useState(false)
@@ -55,8 +73,14 @@ export function LocalSyncModal({ triggerLabel }: Readonly<LocalSyncModalProps>) 
   const [lastImportedFile, setLastImportedFile] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage)
   const [statusTone, setStatusTone] = useState<StatusTone>("default")
-  const { bedEntryCount, clearRoster, entryCount, patientEntryCount, setRoster } =
-    useLocalRoster()
+  const {
+    bedEntryCount,
+    bulkUpdateBedRoster,
+    bulkUpdateRoster,
+    clearRoster,
+    entryCount,
+    patientEntryCount,
+  } = useLocalRoster()
 
   const handleDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -77,12 +101,26 @@ export function LocalSyncModal({ triggerLabel }: Readonly<LocalSyncModalProps>) 
 
         if (parseResult.errors.length > 0) throw new Error("CSV_PARSE_FAILED")
 
-        const roster = buildRosterFromCsv(parseResult.data, parseResult.meta.fields ?? [])
-        setRoster(roster)
+        const { bedRoster, patientRoster } = buildRosterFromCsv(
+          parseResult.data,
+          parseResult.meta.fields ?? [],
+          privacyLocale
+        )
+
+        bulkUpdateBedRoster(bedRoster)
+        bulkUpdateRoster(patientRoster)
+
+        const bedCount = Object.keys(bedRoster).length
+        const patientCount = Object.keys(patientRoster).length
+
         setLastImportedFile(file.name)
         setStatusTone("success")
-        setStatusMessage(t("status.imported", { count: Object.keys(roster).length }))
-        toast.success(t("toasts.synced"))
+        setStatusMessage(
+          t("status.imported", { bedCount, patientCount, total: bedCount + patientCount })
+        )
+        toast.success(
+          t("toasts.synced", { bedCount, patientCount, total: bedCount + patientCount })
+        )
       } catch (error) {
         const message = getLocalSyncErrorMessage(error, t)
         setStatusTone("error")
@@ -92,7 +130,7 @@ export function LocalSyncModal({ triggerLabel }: Readonly<LocalSyncModalProps>) 
         setIsImporting(false)
       }
     },
-    [setRoster, t]
+    [bulkUpdateBedRoster, bulkUpdateRoster, privacyLocale, t]
   )
 
   const handleClear = useCallback(() => {
@@ -114,6 +152,21 @@ export function LocalSyncModal({ triggerLabel }: Readonly<LocalSyncModalProps>) 
     onDrop: handleDrop,
   })
 
+  const triggerButton = useMemo(
+    () => (
+      <Button
+        variant={triggerVariant}
+        size={triggerSize}
+        className={cn("gap-2", triggerClassName)}
+        type="button"
+      >
+        <ShieldCheck className="size-4 shrink-0" />
+        {resolvedTriggerLabel}
+      </Button>
+    ),
+    [resolvedTriggerLabel, triggerClassName, triggerSize, triggerVariant]
+  )
+
   return (
     <Dialog
       open={isOpen}
@@ -125,12 +178,7 @@ export function LocalSyncModal({ triggerLabel }: Readonly<LocalSyncModalProps>) 
         }
       }}
     >
-      <DialogTrigger asChild>
-        <Button>
-          <ShieldCheck className="size-4" />
-          {resolvedTriggerLabel}
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger asChild>{triggerButton}</DialogTrigger>
 
       <DialogContent
         showCloseButton={false}

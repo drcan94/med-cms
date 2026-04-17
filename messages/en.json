@@ -1,4 +1,7 @@
 {
+  "Common": {
+    "close": "Close"
+  },
   "Header": {
     "openSidebar": "Open sidebar navigation",
     "title": "Clinical Workspace",
@@ -107,16 +110,19 @@
       "notFound": "Patient not found.",
       "crossOrganization": "Cannot move patients between clinics."
     },
-    "clinicalRequirementsIndicator": "Required actions pending"
+    "clinicalRequirementsIndicator": "Required actions pending",
+    "localSyncButton": "Local sync"
   },
   "PatientSheet": {
     "badges": {
       "editing": "Edit patient",
+      "live": "Live",
       "new": "New patient",
       "privacy": "Names stay local"
     },
     "titles": {
       "editing": "Edit Patient",
+      "live": "Patient",
       "new": "New Patient"
     },
     "description": "Full names stay on your device. Only initials and identifiers are stored securely.",
@@ -130,9 +136,9 @@
         "placeholder": "A*** A***"
       },
       "identifierCode": {
-        "label": "Last 6 ID",
+        "label": "Transaction ID",
         "placeholder": "482194",
-        "description": "Last 6 digits of MRN or file number."
+        "description": "Six-character visit / transaction ID (İşlem No / protocol) from the hospital system."
       },
       "bedId": {
         "label": "Bed",
@@ -179,17 +185,23 @@
         }
       }
     },
-    "privacyNote": "Patients in Waiting List can still be matched locally by initials and ID.",
+    "privacyNote": "Patients in Waiting List can still be matched locally by initials and transaction ID.",
     "actions": {
       "cancel": "Cancel",
+      "close": "Close",
       "saving": "Saving...",
       "saveChanges": "Save changes",
       "createPatient": "Add patient"
     },
+    "syncStatus": {
+      "idle": "Ready",
+      "saving": "Saving…",
+      "saved": "Saved"
+    },
     "toasts": {
       "missingContext": "Select a clinic and sign in first.",
-      "requiredFields": "Full name, last 6 ID, diagnosis, and admission date are required.",
-      "invalidIdentifierCode": "Last 6 ID must be exactly 6 characters.",
+      "requiredFields": "Full name, transaction ID, diagnosis, and admission date are required.",
+      "invalidIdentifierCode": "Transaction ID must be exactly 6 characters.",
       "updated": "Patient updated.",
       "created": "Patient added.",
       "saveError": "Unable to save patient.",
@@ -198,7 +210,8 @@
       "notFound": "Patient not found.",
       "crossOrganization": "Cannot update patients from other clinics.",
       "conflict": "Conflict: Another physician updated this patient",
-      "conflictDescription": "Your changes were not saved. Please refresh the page or back up your changes."
+      "conflictDescription": "Your changes were not saved. Please refresh the page or back up your changes.",
+      "conflictLiveMerge": "Form was updated to match the latest record."
     },
     "clinicalRequirements": {
       "banner": "Required Actions: {items}",
@@ -216,7 +229,7 @@
     }
   },
   "PatientDialogView": {
-    "subtitle": "ID: {identifierCode}",
+    "subtitle": "Visit ID: {identifierCode}",
     "editButton": "Edit",
     "closeButton": "Close",
     "sections": {
@@ -511,19 +524,19 @@
     "localSyncBody": "Imported names stay in browser storage only. No patient names are sent to the server."
   },
   "LocalSyncModal": {
-    "trigger": "Import patient list",
+    "trigger": "Local sync",
     "badges": {
       "privacy": "Zero-risk privacy",
       "localOnly": "This device only"
     },
     "title": "Import Patient List",
-    "description": "Upload a CSV to map bed numbers or identifiers to full names. Data stays on this device.",
+    "description": "Upload a hospital CSV to map beds and visit IDs (İşlem No) to full names. Data stays on this device.",
     "privacyTitle": "Privacy guarantee",
     "privacyDescription": "The uploaded roster is stored only in browser storage. The server never sees patient names.",
     "dropzone": {
       "active": "Drop CSV to import",
       "idle": "Drag and drop a CSV file",
-      "expectation": "Expects \"Patient Name\" plus \"Bed Number\" or \"Initials\" + \"Identifier Code\".",
+      "expectation": "Columns for patient name plus bed number, or name + transaction / visit ID (e.g. İşlem No, protocol). Optional: initials column for legacy exports.",
       "fileHint": "CSV only, one file per import"
     },
     "summary": {
@@ -535,18 +548,18 @@
       "latestImportEmpty": "No CSV imported this session."
     },
     "status": {
-      "default": "Upload a CSV with patient names and bed numbers or identifiers.",
+      "default": "Upload a CSV with patient names and bed numbers and/or visit IDs (transaction ID).",
       "processing": "Processing {fileName}...",
-      "imported": "Imported {count} patient records to this device.",
+      "imported": "Merged {total} mappings ({bedCount} beds, {patientCount} by visit ID).",
       "cleared": "Patient list cleared from this device."
     },
     "toasts": {
-      "synced": "Patient list imported.",
+      "synced": "Imported {total} local mappings ({bedCount} beds, {patientCount} by visit ID).",
       "cleared": "Patient list cleared."
     },
     "errors": {
       "parseFailed": "Could not parse CSV.",
-      "missingColumns": "CSV must include \"Patient Name\" plus \"Bed Number\" or \"Initials\" + \"Identifier Code\".",
+      "missingColumns": "CSV must include a name column plus a bed column, or name + visit/transaction ID, or name + initials + visit ID.",
       "noValidRows": "No valid patient rows found.",
       "syncFailed": "Import failed."
     },
@@ -798,12 +811,38 @@
     "bed": "Bed",
     "days": "Days",
     "diagnosis": "Diagnosis",
+    "procedureBadge": "Op: {procedure}",
     "staging": "Waiting List",
     "bedLabel": "Bed {number}",
     "vitals": "Vitals",
+    "vitalsAbbrev": {
+      "temperature": "T",
+      "bloodPressure": "BP",
+      "pulse": "HR",
+      "spO2": "SpO₂"
+    },
+    "sides": {
+      "right": "Right",
+      "left": "Left",
+      "bilateral": "Bilateral"
+    },
+    "thoracicTypes": {
+      "chest_tube": "Chest tube",
+      "drain": "Drain"
+    },
+    "drainageVolume": "{value} cc",
+    "dayBadge": "D{day}",
     "tubesDrains": "Tubes & Drains",
     "antibiotics": "Antibiotics",
     "pendingCultures": "Pending Cultures",
+    "cultureTypes": {
+      "blood_culture": "Blood culture",
+      "urine_culture": "Urine culture",
+      "sputum_culture": "Sputum culture",
+      "fluid_culture": "Fluid culture",
+      "fluid_biochemistry": "Fluid biochemistry",
+      "cytology": "Cytology"
+    },
     "todosTitle": "Quick Todos"
   },
   "PrintableVisitSheet": {
@@ -824,7 +863,35 @@
     },
     "empty": "No patients available.",
     "staging": "Waiting List",
-    "bedLabel": "Bed {number}"
+    "bedLabel": "Bed {number}",
+    "procedureBadge": "Op: {procedure}",
+    "dayBadge": "D{day}",
+    "drainagePart": " {value}cc",
+    "interventionSummary": "{side} {type} {size} ({dayBadge}){drainage}",
+    "antibioticSummary": "{name} {dayBadge}",
+    "printSides": {
+      "right": "R",
+      "left": "L",
+      "bilateral": "Bil"
+    },
+    "printThoracicTypes": {
+      "chest_tube": "Tube",
+      "drain": "Drain"
+    },
+    "cultureTypes": {
+      "blood_culture": "Blood culture",
+      "urine_culture": "Urine culture",
+      "sputum_culture": "Sputum culture",
+      "fluid_culture": "Fluid culture",
+      "fluid_biochemistry": "Fluid biochemistry",
+      "cytology": "Cytology"
+    },
+    "vitals": {
+      "alertFebrile": "T:{temperature}°",
+      "alertHypoxic": "SpO2:{spO2}%",
+      "alertTachycardic": "P:{pulse}",
+      "line": "{bloodPressure} P:{pulse} SpO2:{spO2}%"
+    }
   },
   "VisitTodoList": {
     "title": "Quick Todos",
@@ -931,6 +998,7 @@
     "redirecting": "Redirecting to workspace..."
   },
   "AuthSyncWrapper": {
+    "brandName": "WardOS",
     "loading": "Loading...",
     "authenticating": "Authenticating...",
     "connecting": "Connecting to workspace...",

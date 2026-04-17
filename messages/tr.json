@@ -1,4 +1,7 @@
 {
+  "Common": {
+    "close": "Kapat"
+  },
   "Header": {
     "openSidebar": "Kenar çubuğunu aç",
     "title": "Klinik Çalışma Alanı",
@@ -107,19 +110,22 @@
       "notFound": "Hasta bulunamadı.",
       "crossOrganization": "Klinikler arası hasta taşınamaz."
     },
-    "clinicalRequirementsIndicator": "Gerekli işlemler bekliyor"
+    "clinicalRequirementsIndicator": "Gerekli işlemler bekliyor",
+    "localSyncButton": "CSV senkronizasyon"
   },
   "PatientSheet": {
     "badges": {
       "editing": "Hastayı düzenle",
+      "live": "Canlı",
       "new": "Yeni hasta",
       "privacy": "Adlar yerelde kalır"
     },
     "titles": {
       "editing": "Hastayı Düzenle",
+      "live": "Hasta",
       "new": "Yeni Hasta"
     },
-    "description": "Tam adlar cihazınızda kalır. Yalnızca baş harfler ve tanımlayıcılar güvenli şekilde saklanır.",
+    "description": "Tam adlar cihazınızda kalır. Yalnızca baş harfler ve İşlem No güvenli şekilde saklanır.",
     "fields": {
       "fullName": {
         "label": "Ad soyad",
@@ -130,9 +136,9 @@
         "placeholder": "A*** A***"
       },
       "identifierCode": {
-        "label": "Son 6 ID",
+        "label": "İşlem No",
         "placeholder": "482194",
-        "description": "Protokol veya dosya numarasının son 6 hanesi."
+        "description": "Hastane sistemindeki 6 karakterlik işlem / ziyaret numarası (protokol)."
       },
       "bedId": {
         "label": "Yatak",
@@ -179,17 +185,23 @@
         }
       }
     },
-    "privacyNote": "Servis Bekleyenler'deki hastalar baş harfler ve ID ile yerelde eşleştirilebilir.",
+    "privacyNote": "Servis Bekleyenler'deki hastalar baş harfler ve İşlem No ile yerelde eşleştirilebilir.",
     "actions": {
       "cancel": "İptal",
+      "close": "Kapat",
       "saving": "Kaydediliyor...",
       "saveChanges": "Kaydet",
       "createPatient": "Hasta ekle"
     },
+    "syncStatus": {
+      "idle": "Hazır",
+      "saving": "Kaydediliyor…",
+      "saved": "Kaydedildi"
+    },
     "toasts": {
       "missingContext": "Önce bir klinik seçin ve giriş yapın.",
-      "requiredFields": "Ad soyad, son 6 ID, tanı ve yatış tarihi gereklidir.",
-      "invalidIdentifierCode": "Son 6 ID tam olarak 6 karakter olmalıdır.",
+      "requiredFields": "Ad soyad, İşlem No, tanı ve yatış tarihi gereklidir.",
+      "invalidIdentifierCode": "İşlem No tam olarak 6 karakter olmalıdır.",
       "updated": "Hasta güncellendi.",
       "created": "Hasta eklendi.",
       "saveError": "Hasta kaydedilemedi.",
@@ -198,7 +210,8 @@
       "notFound": "Hasta bulunamadı.",
       "crossOrganization": "Başka kliniklerdeki hastalar güncellenemez.",
       "conflict": "Çakışma: Başka bir hekim bu hastayı güncelledi",
-      "conflictDescription": "Değişiklikleriniz kaydedilmedi. Lütfen sayfayı yenileyin veya değişikliklerinizi yedekleyin."
+      "conflictDescription": "Değişiklikleriniz kaydedilmedi. Lütfen sayfayı yenileyin veya değişikliklerinizi yedekleyin.",
+      "conflictLiveMerge": "Form en güncel kayıtla eşitlendi."
     },
     "clinicalRequirements": {
       "banner": "Klinik Gereksinimler: {items}",
@@ -216,7 +229,7 @@
     }
   },
   "PatientDialogView": {
-    "subtitle": "ID: {identifierCode}",
+    "subtitle": "İşlem No: {identifierCode}",
     "editButton": "Düzenle",
     "closeButton": "Kapat",
     "sections": {
@@ -511,19 +524,19 @@
     "localSyncBody": "İçe aktarılan adlar yalnızca tarayıcı deposunda kalır. Hiçbir hasta adı sunucuya gönderilmez."
   },
   "LocalSyncModal": {
-    "trigger": "Hasta listesini içe aktar",
+    "trigger": "CSV senkronizasyon",
     "badges": {
       "privacy": "Sıfır riskli gizlilik",
       "localOnly": "Yalnızca bu cihaz"
     },
     "title": "Hasta Listesini İçe Aktar",
-    "description": "Yatak numaralarını veya tanımlayıcıları tam adlarla eşlemek için CSV yükleyin. Veriler bu cihazda kalır.",
+    "description": "Hastane CSV'si ile yatak ve İşlem No eşlemesini tam adlarla yapın. Veriler bu cihazda kalır.",
     "privacyTitle": "Gizlilik garantisi",
     "privacyDescription": "Yüklenen liste yalnızca tarayıcı deposunda saklanır. Sunucu hasta adlarını asla görmez.",
     "dropzone": {
       "active": "İçe aktarmak için CSV'yi bırakın",
       "idle": "CSV dosyasını sürükleyip bırakın",
-      "expectation": "\"Patient Name\" ile \"Bed Number\" veya \"Initials\" + \"Identifier Code\" beklenir.",
+      "expectation": "Hasta adı ve yatak sütunu veya ad + işlem / protokol numarası (ör. İşlem No). İsteğe bağlı: eski dışa aktarımlar için baş harf sütunu.",
       "fileHint": "Yalnızca CSV, her içe aktarmada tek dosya"
     },
     "summary": {
@@ -535,18 +548,18 @@
       "latestImportEmpty": "Bu oturumda CSV içe aktarılmadı."
     },
     "status": {
-      "default": "Hasta adları ve yatak numaraları veya tanımlayıcılar içeren CSV yükleyin.",
+      "default": "Hasta adı ile yatak numarası ve/veya İşlem No içeren CSV yükleyin.",
       "processing": "{fileName} işleniyor...",
-      "imported": "{count} hasta kaydı bu cihaza aktarıldı.",
+      "imported": "{total} eşleme birleştirildi ({bedCount} yatak, {patientCount} İşlem No ile).",
       "cleared": "Hasta listesi bu cihazdan silindi."
     },
     "toasts": {
-      "synced": "Hasta listesi içe aktarıldı.",
+      "synced": "{total} yerel eşleme içe aktarıldı ({bedCount} yatak, {patientCount} İşlem No).",
       "cleared": "Hasta listesi silindi."
     },
     "errors": {
       "parseFailed": "CSV ayrıştırılamadı.",
-      "missingColumns": "CSV \"Patient Name\" ile \"Bed Number\" veya \"Initials\" + \"Identifier Code\" içermelidir.",
+      "missingColumns": "CSV'de ad sütunu ile yatak sütunu, veya ad + işlem / ziyaret numarası, veya ad + baş harf + işlem numarası olmalıdır.",
       "noValidRows": "Geçerli hasta satırı bulunamadı.",
       "syncFailed": "İçe aktarma başarısız."
     },
@@ -798,12 +811,38 @@
     "bed": "Yatak",
     "days": "Günler",
     "diagnosis": "Tanı",
+    "procedureBadge": "Op: {procedure}",
     "staging": "Servis Bekleyenler",
     "bedLabel": "Yatak {number}",
     "vitals": "Vitaller",
+    "vitalsAbbrev": {
+      "temperature": "T",
+      "bloodPressure": "TA",
+      "pulse": "Nb",
+      "spO2": "SpO₂"
+    },
+    "sides": {
+      "right": "Sağ",
+      "left": "Sol",
+      "bilateral": "Bilateral"
+    },
+    "thoracicTypes": {
+      "chest_tube": "Tüp",
+      "drain": "Dren"
+    },
+    "drainageVolume": "{value} cc",
+    "dayBadge": "G{day}",
     "tubesDrains": "Tüpler ve Drenler",
     "antibiotics": "Antibiyotikler",
     "pendingCultures": "Bekleyen Kültürler",
+    "cultureTypes": {
+      "blood_culture": "Kan kültürü",
+      "urine_culture": "İdrar kültürü",
+      "sputum_culture": "Balgam kültürü",
+      "fluid_culture": "Sıvı kültürü",
+      "fluid_biochemistry": "Sıvı biyokimya",
+      "cytology": "Sitoloji"
+    },
     "todosTitle": "Hızlı Görevler"
   },
   "PrintableVisitSheet": {
@@ -824,7 +863,35 @@
     },
     "empty": "Hasta mevcut değil.",
     "staging": "Servis Bekleyenler",
-    "bedLabel": "Yatak {number}"
+    "bedLabel": "Yatak {number}",
+    "procedureBadge": "Op: {procedure}",
+    "dayBadge": "G{day}",
+    "drainagePart": " {value}cc",
+    "interventionSummary": "{side} {type} {size} ({dayBadge}){drainage}",
+    "antibioticSummary": "{name} {dayBadge}",
+    "printSides": {
+      "right": "Sğ",
+      "left": "Sl",
+      "bilateral": "Bil"
+    },
+    "printThoracicTypes": {
+      "chest_tube": "Tüp",
+      "drain": "Dren"
+    },
+    "cultureTypes": {
+      "blood_culture": "Kan K.",
+      "urine_culture": "İdrar K.",
+      "sputum_culture": "Balgam K.",
+      "fluid_culture": "Sıvı K.",
+      "fluid_biochemistry": "Sıvı BK",
+      "cytology": "Sitoloji"
+    },
+    "vitals": {
+      "alertFebrile": "T:{temperature}°",
+      "alertHypoxic": "SpO2:{spO2}%",
+      "alertTachycardic": "P:{pulse}",
+      "line": "{bloodPressure} P:{pulse} SpO2:{spO2}%"
+    }
   },
   "VisitTodoList": {
     "title": "Hızlı Görevler",
@@ -868,7 +935,7 @@
       },
       "privacy": {
         "title": "Sıfır Riskli Veri Gizliliği",
-        "description": "Tam adlar cihazınızda kalır. Sunucu yalnızca baş harfleri ve tanımlayıcıları görür."
+        "description": "Tam adlar cihazınızda kalır. Sunucu yalnızca baş harfleri ve İşlem No’yu görür."
       }
     },
     "cta": {
@@ -931,6 +998,7 @@
     "redirecting": "Çalışma alanına yönlendiriliyor..."
   },
   "AuthSyncWrapper": {
+    "brandName": "WardOS",
     "loading": "Yükleniyor...",
     "authenticating": "Kimlik doğrulanıyor...",
     "connecting": "Çalışma alanına bağlanılıyor...",

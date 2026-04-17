@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Link } from "@/i18n/navigation"
 import { useLocalRoster } from "@/hooks/useLocalRoster"
 import { usePLGLimits } from "@/hooks/usePLGLimits"
@@ -211,12 +212,9 @@ export default function WardMapPage() {
           <CardDescription>{t("noLayoutDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Link
-            href="/settings/ward-map"
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-          >
-            {t("openWardLayoutEditor")}
-          </Link>
+          <Button asChild variant="default" size="default" className="w-full sm:w-auto">
+            <Link href="/settings/ward-map">{t("openWardLayoutEditor")}</Link>
+          </Button>
         </CardContent>
       </Card>
     )

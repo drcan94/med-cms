@@ -32,19 +32,56 @@ type VisitRoundsCardProps = {
   entry: VisitSheetEntry
 }
 
-const SIDE_LABELS: Record<string, string> = {
-  right: "Sağ",
-  left: "Sol",
-  bilateral: "Bilateral",
+function thoracicSideLabel(
+  side: string,
+  t: (key: string) => string
+): string {
+  switch (side) {
+    case "right":
+      return t("sides.right")
+    case "left":
+      return t("sides.left")
+    case "bilateral":
+      return t("sides.bilateral")
+    default:
+      return side
+  }
 }
 
-const CULTURE_TYPE_LABELS: Record<string, string> = {
-  blood_culture: "Kan Kültürü",
-  urine_culture: "İdrar Kültürü",
-  sputum_culture: "Balgam Kültürü",
-  fluid_culture: "Sıvı Kültürü",
-  fluid_biochemistry: "Sıvı BK",
-  cytology: "Sitoloji",
+function thoracicTypeLabel(
+  type: string,
+  t: (key: string) => string
+): string {
+  switch (type) {
+    case "chest_tube":
+      return t("thoracicTypes.chest_tube")
+    case "drain":
+      return t("thoracicTypes.drain")
+    default:
+      return type
+  }
+}
+
+function pendingCultureLabel(
+  type: string,
+  t: (key: string) => string
+): string {
+  switch (type) {
+    case "blood_culture":
+      return t("cultureTypes.blood_culture")
+    case "urine_culture":
+      return t("cultureTypes.urine_culture")
+    case "sputum_culture":
+      return t("cultureTypes.sputum_culture")
+    case "fluid_culture":
+      return t("cultureTypes.fluid_culture")
+    case "fluid_biochemistry":
+      return t("cultureTypes.fluid_biochemistry")
+    case "cytology":
+      return t("cultureTypes.cytology")
+    default:
+      return type
+  }
 }
 
 export function VisitRoundsCard({ entry }: Readonly<VisitRoundsCardProps>) {
@@ -105,7 +142,7 @@ export function VisitRoundsCard({ entry }: Readonly<VisitRoundsCardProps>) {
               </Badge>
               {entry.procedureName && (
                 <Badge variant="outline" className="px-2 py-0.5 text-xs">
-                  Op: {entry.procedureName}
+                  {t("procedureBadge", { procedure: entry.procedureName })}
                 </Badge>
               )}
             </div>
@@ -130,7 +167,8 @@ export function VisitRoundsCard({ entry }: Readonly<VisitRoundsCardProps>) {
                 <div className="grid grid-cols-4 gap-2 text-sm">
                   <div>
                     <span className="text-xs text-muted-foreground">
-                      <Thermometer className="mr-0.5 inline size-3" />T
+                      <Thermometer className="mr-0.5 inline size-3" />
+                      {t("vitalsAbbrev.temperature")}
                     </span>
                     <p
                       className={`font-medium ${entry.vitals.isFebrile ? "text-red-600" : ""}`}
@@ -139,11 +177,15 @@ export function VisitRoundsCard({ entry }: Readonly<VisitRoundsCardProps>) {
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs text-muted-foreground">TA</span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("vitalsAbbrev.bloodPressure")}
+                    </span>
                     <p className="font-medium">{entry.vitals.bloodPressure}</p>
                   </div>
                   <div>
-                    <span className="text-xs text-muted-foreground">Nb</span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("vitalsAbbrev.pulse")}
+                    </span>
                     <p
                       className={`font-medium ${entry.vitals.isTachycardic ? "text-orange-600" : ""}`}
                     >
@@ -151,7 +193,9 @@ export function VisitRoundsCard({ entry }: Readonly<VisitRoundsCardProps>) {
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs text-muted-foreground">SpO2</span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("vitalsAbbrev.spO2")}
+                    </span>
                     <p
                       className={`font-medium ${entry.vitals.isHypoxic ? "text-red-600" : ""}`}
                     >
@@ -172,19 +216,21 @@ export function VisitRoundsCard({ entry }: Readonly<VisitRoundsCardProps>) {
                   {activeInterventions.map((intervention) => (
                     <div key={intervention.id} className="flex items-center justify-between">
                       <span className="text-sm">
-                        {SIDE_LABELS[intervention.side]}{" "}
-                        {intervention.type === "chest_tube" ? "Tüp" : "Dren"}{" "}
+                        {thoracicSideLabel(intervention.side, t)}{" "}
+                        {thoracicTypeLabel(intervention.type, t)}{" "}
                         {intervention.size}
                       </span>
                       <div className="flex items-center gap-2">
                         {intervention.latestDrainage !== undefined && (
                           <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
                             <Droplets className="size-3" />
-                            {intervention.latestDrainage}cc
+                            {t("drainageVolume", {
+                              value: intervention.latestDrainage,
+                            })}
                           </span>
                         )}
                         <Badge variant="outline" className="text-xs">
-                          G{intervention.dayCount}
+                          {t("dayBadge", { day: intervention.dayCount })}
                         </Badge>
                       </div>
                     </div>
@@ -208,7 +254,8 @@ export function VisitRoundsCard({ entry }: Readonly<VisitRoundsCardProps>) {
                           variant="secondary"
                           className="bg-amber-100 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                         >
-                          {abx.name} G{abx.dayCount}
+                          {abx.name}{" "}
+                          {t("dayBadge", { day: abx.dayCount })}
                         </Badge>
                       ))}
                     </div>
@@ -223,7 +270,7 @@ export function VisitRoundsCard({ entry }: Readonly<VisitRoundsCardProps>) {
                     <div className="flex flex-wrap gap-1.5">
                       {entry.pendingCultures.map((culture) => (
                         <Badge key={culture.id} variant="outline" className="text-xs">
-                          {CULTURE_TYPE_LABELS[culture.type] ?? culture.type}
+                          {pendingCultureLabel(culture.type, t)}
                         </Badge>
                       ))}
                     </div>

@@ -1,6 +1,7 @@
 import { LayoutGrid } from "lucide-react"
 import { useTranslations } from "next-intl"
 
+import { LocalSyncModal } from "@/components/organisms/local-sync-modal"
 import { Badge } from "@/components/ui/badge"
 
 type WardMapHeroProps = {
@@ -25,6 +26,12 @@ export function WardMapHero({
             <LayoutGrid className="size-3" />
             {t("heroBadge")}
           </Badge>
+          <LocalSyncModal
+            triggerClassName="shrink-0"
+            triggerLabel={t("localSyncButton")}
+            triggerSize="sm"
+            triggerVariant="outline"
+          />
         </div>
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">{t("heroTitle")}</h1>

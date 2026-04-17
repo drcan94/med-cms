@@ -131,34 +131,51 @@ export function AuthSyncWrapper({ children }: Readonly<AuthSyncWrapperProps>) {
     />
   )
 
+  const brandName = t("brandName")
+
   if (!isClerkLoaded) {
-    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("loading")} />
+    return isTimedOut ? renderErrorState() : (
+      <SyncLoadingState brandName={brandName} message={t("loading")} />
+    )
   }
 
   if (!isSignedIn) {
-    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("authenticating")} />
+    return isTimedOut ? renderErrorState() : (
+      <SyncLoadingState brandName={brandName} message={t("authenticating")} />
+    )
   }
 
   if (syncStatus === undefined) {
-    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("connecting")} />
+    return isTimedOut ? renderErrorState() : (
+      <SyncLoadingState brandName={brandName} message={t("connecting")} />
+    )
   }
 
   if (syncStatus.status === "unauthenticated") {
-    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("authenticating")} />
+    return isTimedOut ? renderErrorState() : (
+      <SyncLoadingState brandName={brandName} message={t("authenticating")} />
+    )
   }
 
   if (syncStatus.status === "user_pending") {
-    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("userSync")} />
+    return isTimedOut ? renderErrorState() : (
+      <SyncLoadingState brandName={brandName} message={t("userSync")} />
+    )
   }
 
   if (syncStatus.status === "membership_pending") {
-    return isTimedOut ? renderErrorState() : <SyncLoadingState message={t("membershipSync")} />
+    return isTimedOut ? renderErrorState() : (
+      <SyncLoadingState brandName={brandName} message={t("membershipSync")} />
+    )
   }
 
   return <>{children}</>
 }
 
-function SyncLoadingState({ message }: Readonly<{ message: string }>) {
+function SyncLoadingState({
+  brandName,
+  message,
+}: Readonly<{ brandName: string; message: string }>) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-6 text-center">
@@ -172,7 +189,7 @@ function SyncLoadingState({ message }: Readonly<{ message: string }>) {
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold tracking-tight">WardOS</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{brandName}</h2>
           <p className="text-sm text-muted-foreground">{message}</p>
         </div>
 

@@ -4,7 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "convex/react"
-import { Activity, Cloud, CloudOff, Pill, Stethoscope, User, X } from "lucide-react"
+import {
+  Activity,
+  Check,
+  Loader2,
+  Pill,
+  Stethoscope,
+  User,
+  X,
+} from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 
@@ -37,7 +45,62 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 type PatientRecord = Doc<"patients">
 type PatientFormTab = "basic" | "clinical" | "thoracic" | "meds"
 
-const AUTOSAVE_DEBOUNCE_MS = 750
+const AUTOSAVE_DEBOUNCE_MS = 1750
+
+function hasDirtyField(d: unknown): boolean {
+  if (d === true) {
+    return true
+  }
+  if (Array.isArray(d)) {
+    return d.some(hasDirtyField)
+  }
+  if (d && typeof d === "object") {
+    return Object.values(d as Record<string, unknown>).some(hasDirtyField)
+  }
+  return false
+}
+
+function buildFormPatchFromDirty(
+  data: PatientFormData,
+  dirtyFields: Record<string, unknown>
+): {
+  patch: Partial<PatientFormData>
+  includeInitialsFromFullName: boolean
+} {
+  const patch: Partial<PatientFormData> = {}
+  const keys: (keyof PatientFormData)[] = [
+    "identifierCode",
+    "bedId",
+    "serviceName",
+    "diagnosis",
+    "admissionDate",
+    "surgeryDate",
+    "procedureName",
+    "gender",
+    "isPregnant",
+    "anamnesis",
+    "vitals",
+    "aaGradient",
+    "criticalMedications",
+    "oncologyHistory",
+    "reports",
+    "externalWard",
+    "thoracicInterventions",
+    "labCultures",
+    "consultations",
+    "antibiotics",
+    "visitNotes",
+  ]
+  for (const key of keys) {
+    if (hasDirtyField(dirtyFields[key as string])) {
+      ;(patch as Record<string, unknown>)[key as string] = data[key]
+    }
+  }
+  return {
+    patch,
+    includeInitialsFromFullName: hasDirtyField(dirtyFields.fullName),
+  }
+}
 
 function shouldSaveImmediately(fieldName?: string): boolean {
   if (!fieldName) {
@@ -202,6 +265,7 @@ export function PatientDialogLive({
   })
 
   const watchedFullName = form.watch("fullName")
+  const watchedIdentifierCode = form.watch("identifierCode")
   const watchedDiagnosis = form.watch("diagnosis")
   const watchedProcedure = form.watch("procedureName")
 
@@ -250,12 +314,18 @@ export function PatientDialogLive({
 
   const applyPatientToForm = useCallback(
     (record: PatientRecord) => {
-      const fullName = getLocalPatientName({
-        bedId: record.bedId,
-        identifierCode: record.identifierCode,
-        initials: record.initials,
-        patientId: record._id,
-      })
+      const currentId = sanitizeIdentifierCodeInput(form.getValues("identifierCode"))
+      const preserveTypedName =
+        Boolean(form.formState.dirtyFields.fullName) &&
+        record.identifierCode === currentId
+      const fullName = preserveTypedName
+        ? (form.getValues("fullName") ?? "")
+        : getLocalPatientName({
+            bedId: record.bedId,
+            identifierCode: record.identifierCode,
+            initials: record.initials,
+            patientId: record._id,
+          })
       suppressAutosaveRef.current = true
       isApplyingRemoteRef.current = true
       form.reset(getDefaultFormValues(record, fullName))
@@ -266,6 +336,23 @@ export function PatientDialogLive({
     },
     [form, getLocalPatientName]
   )
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    const name = watchedFullName?.trim() ?? ""
+    const id = sanitizeIdentifierCodeInput(watchedIdentifierCode ?? "")
+    if (!name || id.length !== 6) {
+      return
+    }
+    const initials = generatePatientInitials(name, locale)
+    setPatientName({
+      fullName: name,
+      identifierCode: id,
+      initials,
+    })
+  }, [open, watchedFullName, watchedIdentifierCode, locale, setPatientName])
 
   useEffect(() => {
     if (!open || !patient?._id) {
@@ -317,7 +404,12 @@ export function PatientDialogLive({
     }
 
     const data = form.getValues()
+    const dirtyFields = form.formState.dirtyFields
     const gen = ++persistGenerationRef.current
+
+    if (isEditingExisting && Object.keys(dirtyFields).length === 0) {
+      return
+    }
 
     if (!effectivePatientId && !canPersistNewPatient(data)) {
       return
@@ -325,92 +417,224 @@ export function PatientDialogLive({
 
     const normalizedData = data
     const fullName = data.fullName?.trim() ?? ""
-    const initials = fullName
+    const initialsFromName = fullName
       ? generatePatientInitials(fullName, locale)
       : (livePatient ?? patient)?.initials ?? ""
 
     const fallbackRecordedAt = new Date().toISOString()
-    const normalizedVitals = normalizedData.vitals
-      ? {
-          ...normalizedData.vitals,
-          recordedAt:
-            normalizedData.vitals.recordedAt ?? fallbackRecordedAt,
+
+    const buildNormalizedPayload = () => {
+      const normalizedVitals = normalizedData.vitals
+        ? {
+            ...normalizedData.vitals,
+            recordedAt:
+              normalizedData.vitals.recordedAt ?? fallbackRecordedAt,
+          }
+        : undefined
+      const normalizedOncologyHistory = normalizedData.oncologyHistory
+        ? {
+            chemotherapy: normalizedData.oncologyHistory.chemotherapy
+              ? {
+                  ...normalizedData.oncologyHistory.chemotherapy,
+                  received:
+                    normalizedData.oncologyHistory.chemotherapy.received ??
+                    false,
+                }
+              : undefined,
+            radiotherapy: normalizedData.oncologyHistory.radiotherapy
+              ? {
+                  ...normalizedData.oncologyHistory.radiotherapy,
+                  received:
+                    normalizedData.oncologyHistory.radiotherapy.received ??
+                    false,
+                }
+              : undefined,
+          }
+        : undefined
+      return {
+        normalizedOncologyHistory,
+        normalizedVitals,
+      }
+    }
+
+    if (effectivePatientId) {
+      const { patch, includeInitialsFromFullName } = buildFormPatchFromDirty(
+        data,
+        dirtyFields as Record<string, unknown>
+      )
+      const hasPayload =
+        Object.keys(patch).length > 0 || includeInitialsFromFullName
+      if (!hasPayload) {
+        return
+      }
+
+      const { normalizedOncologyHistory, normalizedVitals } =
+        buildNormalizedPayload()
+
+      const mutationArgs = {
+        patientId: effectivePatientId,
+        organizationId,
+        userId,
+        ...(includeInitialsFromFullName ? { initials: initialsFromName } : {}),
+        ...(patch.identifierCode !== undefined
+          ? {
+              identifierCode: sanitizeIdentifierCodeInput(patch.identifierCode),
+            }
+          : {}),
+        ...(patch.bedId !== undefined
+          ? { bedId: patch.bedId || STAGING_BED_ID }
+          : {}),
+        ...(patch.serviceName !== undefined
+          ? { serviceName: patch.serviceName || undefined }
+          : {}),
+        ...(patch.diagnosis !== undefined ? { diagnosis: patch.diagnosis } : {}),
+        ...(patch.admissionDate !== undefined
+          ? { admissionDate: toClinicalIsoDate(patch.admissionDate) }
+          : {}),
+        ...(patch.surgeryDate !== undefined
+          ? {
+              surgeryDate: patch.surgeryDate
+                ? toClinicalIsoDate(patch.surgeryDate)
+                : undefined,
+            }
+          : {}),
+        ...(patch.procedureName !== undefined
+          ? { procedureName: patch.procedureName || undefined }
+          : {}),
+        ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
+        ...(patch.isPregnant !== undefined
+          ? { isPregnant: patch.isPregnant }
+          : {}),
+        ...(patch.anamnesis !== undefined ? { anamnesis: patch.anamnesis } : {}),
+        ...(patch.vitals !== undefined ? { vitals: normalizedVitals } : {}),
+        ...(patch.aaGradient !== undefined
+          ? { aaGradient: patch.aaGradient }
+          : {}),
+        ...(patch.criticalMedications !== undefined
+          ? { criticalMedications: patch.criticalMedications }
+          : {}),
+        ...(patch.oncologyHistory !== undefined
+          ? { oncologyHistory: normalizedOncologyHistory }
+          : {}),
+        ...(patch.reports !== undefined ? { reports: patch.reports } : {}),
+        ...(patch.externalWard !== undefined
+          ? { externalWard: patch.externalWard }
+          : {}),
+        ...(patch.thoracicInterventions !== undefined
+          ? { thoracicInterventions: patch.thoracicInterventions }
+          : {}),
+        ...(patch.labCultures !== undefined
+          ? { labCultures: patch.labCultures }
+          : {}),
+        ...(patch.consultations !== undefined
+          ? { consultations: patch.consultations }
+          : {}),
+        ...(patch.antibiotics !== undefined
+          ? { antibiotics: patch.antibiotics }
+          : {}),
+        ...(patch.visitNotes !== undefined
+          ? { visitNotes: patch.visitNotes }
+          : {}),
+      }
+
+      setSyncState("saving")
+
+      try {
+        const result = await upsertPatient(mutationArgs)
+
+        if (gen !== persistGenerationRef.current) {
+          return
         }
-      : undefined
-    const normalizedOncologyHistory = normalizedData.oncologyHistory
-      ? {
-          chemotherapy: normalizedData.oncologyHistory.chemotherapy
-            ? {
-                ...normalizedData.oncologyHistory.chemotherapy,
-                received:
-                  normalizedData.oncologyHistory.chemotherapy.received ??
-                  false,
-              }
-            : undefined,
-          radiotherapy: normalizedData.oncologyHistory.radiotherapy
-            ? {
-                ...normalizedData.oncologyHistory.radiotherapy,
-                received:
-                  normalizedData.oncologyHistory.radiotherapy.received ??
-                  false,
-              }
-            : undefined,
+
+        const nextValues = { ...form.getValues(), version: result.version }
+        form.reset(nextValues)
+
+        if (fullName) {
+          setPatientName({
+            fullName,
+            identifierCode: sanitizeIdentifierCodeInput(data.identifierCode),
+            initials: initialsFromName,
+          })
         }
-      : undefined
+
+        showSavedIndicator()
+      } catch (error) {
+        if (gen !== persistGenerationRef.current) {
+          return
+        }
+
+        setSyncState("idle")
+
+        if (error instanceof Error) {
+          if (error.message === "TRIAL_LIMIT_REACHED") {
+            toast.error(t("toasts.trialLimitReached"))
+            return
+          }
+
+          toast.error(t("toasts.saveError"), {
+            description: error.message,
+          })
+          return
+        }
+        toast.error(t("toasts.saveError"))
+      }
+      return
+    }
+
+    const { normalizedOncologyHistory, normalizedVitals } =
+      buildNormalizedPayload()
+    const insertArgs = {
+      organizationId,
+      userId,
+      initials: initialsFromName,
+      identifierCode: sanitizeIdentifierCodeInput(
+        normalizedData.identifierCode
+      ),
+      bedId: normalizedData.bedId || STAGING_BED_ID,
+      diagnosis: normalizedData.diagnosis,
+      admissionDate: toClinicalIsoDate(normalizedData.admissionDate),
+      surgeryDate: normalizedData.surgeryDate
+        ? toClinicalIsoDate(normalizedData.surgeryDate)
+        : undefined,
+      procedureName: normalizedData.procedureName || undefined,
+      serviceName: normalizedData.serviceName || undefined,
+      gender: normalizedData.gender,
+      isPregnant: normalizedData.isPregnant,
+      anamnesis: normalizedData.anamnesis,
+      vitals: normalizedVitals,
+      aaGradient: normalizedData.aaGradient,
+      criticalMedications: normalizedData.criticalMedications,
+      oncologyHistory: normalizedOncologyHistory,
+      reports: normalizedData.reports,
+      externalWard: normalizedData.externalWard,
+      thoracicInterventions: normalizedData.thoracicInterventions,
+      labCultures: normalizedData.labCultures,
+      consultations: normalizedData.consultations,
+      antibiotics: normalizedData.antibiotics,
+      visitNotes: normalizedData.visitNotes,
+    }
 
     setSyncState("saving")
 
     try {
-      const result = await upsertPatient({
-        patientId: effectivePatientId ?? undefined,
-        organizationId,
-        userId,
-        initials,
-        identifierCode: sanitizeIdentifierCodeInput(
-          normalizedData.identifierCode
-        ),
-        bedId: normalizedData.bedId || STAGING_BED_ID,
-        diagnosis: normalizedData.diagnosis,
-        admissionDate: toClinicalIsoDate(normalizedData.admissionDate),
-        surgeryDate: normalizedData.surgeryDate
-          ? toClinicalIsoDate(normalizedData.surgeryDate)
-          : undefined,
-        procedureName: normalizedData.procedureName || undefined,
-        serviceName: normalizedData.serviceName || undefined,
-        version: isEditingExisting
-          ? (normalizedData.version ?? (livePatient ?? patient)?.version ?? 0)
-          : undefined,
-        gender: normalizedData.gender,
-        isPregnant: normalizedData.isPregnant,
-        anamnesis: normalizedData.anamnesis,
-        vitals: normalizedVitals,
-        aaGradient: normalizedData.aaGradient,
-        criticalMedications: normalizedData.criticalMedications,
-        oncologyHistory: normalizedOncologyHistory,
-        reports: normalizedData.reports,
-        externalWard: normalizedData.externalWard,
-        thoracicInterventions: normalizedData.thoracicInterventions,
-        labCultures: normalizedData.labCultures,
-        consultations: normalizedData.consultations,
-        antibiotics: normalizedData.antibiotics,
-        visitNotes: normalizedData.visitNotes,
-      })
+      const result = await upsertPatient(insertArgs)
 
       if (gen !== persistGenerationRef.current) {
         return
       }
 
-      if (!effectivePatientId && result.patientId) {
+      if (result.patientId) {
         setCreatedPatientId(result.patientId)
       }
 
-      form.setValue("version", result.version, { shouldDirty: false })
+      const nextValues = { ...form.getValues(), version: result.version }
+      form.reset(nextValues)
 
       if (fullName) {
         setPatientName({
           fullName,
-          identifierCode: data.identifierCode,
-          initials,
+          identifierCode: sanitizeIdentifierCodeInput(data.identifierCode),
+          initials: initialsFromName,
         })
       }
 
@@ -423,15 +647,6 @@ export function PatientDialogLive({
       setSyncState("idle")
 
       if (error instanceof Error) {
-        if (error.message.startsWith("CONFLICT:")) {
-          toast.info(t("toasts.conflict"), {
-            description: t("toasts.conflictLiveMerge"),
-          })
-          if (livePatient) {
-            applyPatientToForm(livePatient)
-          }
-          return
-        }
         if (error.message === "TRIAL_LIMIT_REACHED") {
           toast.error(t("toasts.trialLimitReached"))
           return
@@ -456,7 +671,6 @@ export function PatientDialogLive({
     upsertPatient,
     setPatientName,
     showSavedIndicator,
-    applyPatientToForm,
     t,
   ])
 
@@ -615,27 +829,34 @@ export function PatientDialogLive({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <div
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              className="flex size-7 items-center justify-center"
               aria-live="polite"
+              title={
+                syncState === "saving"
+                  ? t("syncStatus.saving")
+                  : syncState === "saved"
+                    ? t("syncStatus.saved")
+                    : t("syncStatus.idle")
+              }
             >
               {syncState === "saving" ? (
-                <>
-                  <Cloud className="size-3.5 animate-pulse opacity-80" />
-                  <span>{t("syncStatus.saving")}</span>
-                </>
+                <Loader2
+                  className="size-3.5 animate-spin text-muted-foreground/35"
+                  aria-hidden
+                />
               ) : syncState === "saved" ? (
-                <>
-                  <Cloud className="size-3.5 text-emerald-600/90" />
-                  <span className="text-emerald-700/90 dark:text-emerald-400/90">
-                    {t("syncStatus.saved")}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <CloudOff className="size-3.5 opacity-50" />
-                  <span className="opacity-70">{t("syncStatus.idle")}</span>
-                </>
-              )}
+                <Check
+                  className="size-3.5 text-emerald-600/45 dark:text-emerald-400/45"
+                  aria-hidden
+                />
+              ) : null}
+              <span className="sr-only">
+                {syncState === "saving"
+                  ? t("syncStatus.saving")
+                  : syncState === "saved"
+                    ? t("syncStatus.saved")
+                    : t("syncStatus.idle")}
+              </span>
             </div>
             <Button variant="ghost" size="icon-sm" type="button" onClick={handleClose}>
               <X className="size-4" />

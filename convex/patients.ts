@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 
+import type { Doc } from "./_generated/dataModel"
 import {
   FREE_TRIAL_PATIENT_LIMIT,
   normalizeSubscriptionStatus,
@@ -22,7 +23,102 @@ import {
   visitNoteValidator,
   vitalsValidator,
 } from "./clinicalValidators"
+import { mergePatientFromPatch, type PatientUpsertPatch } from "./patientMerge"
 import { requireText, sanitizePatientFields } from "./patientValidators"
+
+function patientPatchFromMutationArgs(args: {
+  initials?: string
+  identifierCode?: string
+  bedId?: string
+  diagnosis?: string
+  admissionDate?: string
+  surgeryDate?: string
+  procedureName?: string
+  serviceName?: string
+  gender?: Doc<"patients">["gender"]
+  isPregnant?: boolean
+  anamnesis?: PatientUpsertPatch["anamnesis"]
+  vitals?: PatientUpsertPatch["vitals"]
+  aaGradient?: PatientUpsertPatch["aaGradient"]
+  criticalMedications?: PatientUpsertPatch["criticalMedications"]
+  oncologyHistory?: PatientUpsertPatch["oncologyHistory"]
+  reports?: PatientUpsertPatch["reports"]
+  externalWard?: PatientUpsertPatch["externalWard"]
+  thoracicInterventions?: PatientUpsertPatch["thoracicInterventions"]
+  labCultures?: PatientUpsertPatch["labCultures"]
+  consultations?: PatientUpsertPatch["consultations"]
+  antibiotics?: PatientUpsertPatch["antibiotics"]
+  visitNotes?: PatientUpsertPatch["visitNotes"]
+}): PatientUpsertPatch {
+  const patch: PatientUpsertPatch = {}
+  if (args.initials !== undefined) {
+    patch.initials = args.initials
+  }
+  if (args.identifierCode !== undefined) {
+    patch.identifierCode = args.identifierCode
+  }
+  if (args.bedId !== undefined) {
+    patch.bedId = args.bedId
+  }
+  if (args.diagnosis !== undefined) {
+    patch.diagnosis = args.diagnosis
+  }
+  if (args.admissionDate !== undefined) {
+    patch.admissionDate = args.admissionDate
+  }
+  if (args.surgeryDate !== undefined) {
+    patch.surgeryDate = args.surgeryDate
+  }
+  if (args.procedureName !== undefined) {
+    patch.procedureName = args.procedureName
+  }
+  if (args.serviceName !== undefined) {
+    patch.serviceName = args.serviceName
+  }
+  if (args.gender !== undefined) {
+    patch.gender = args.gender
+  }
+  if (args.isPregnant !== undefined) {
+    patch.isPregnant = args.isPregnant
+  }
+  if (args.anamnesis !== undefined) {
+    patch.anamnesis = args.anamnesis
+  }
+  if (args.vitals !== undefined) {
+    patch.vitals = args.vitals
+  }
+  if (args.aaGradient !== undefined) {
+    patch.aaGradient = args.aaGradient
+  }
+  if (args.criticalMedications !== undefined) {
+    patch.criticalMedications = args.criticalMedications
+  }
+  if (args.oncologyHistory !== undefined) {
+    patch.oncologyHistory = args.oncologyHistory
+  }
+  if (args.reports !== undefined) {
+    patch.reports = args.reports
+  }
+  if (args.externalWard !== undefined) {
+    patch.externalWard = args.externalWard
+  }
+  if (args.thoracicInterventions !== undefined) {
+    patch.thoracicInterventions = args.thoracicInterventions
+  }
+  if (args.labCultures !== undefined) {
+    patch.labCultures = args.labCultures
+  }
+  if (args.consultations !== undefined) {
+    patch.consultations = args.consultations
+  }
+  if (args.antibiotics !== undefined) {
+    patch.antibiotics = args.antibiotics
+  }
+  if (args.visitNotes !== undefined) {
+    patch.visitNotes = args.visitNotes
+  }
+  return patch
+}
 
 export const getPatientsByOrganization = query({
   args: {
@@ -109,11 +205,11 @@ export const upsertPatient = mutation({
     patientId: v.optional(v.id("patients")),
     organizationId: v.string(),
     userId: v.string(),
-    initials: v.string(),
-    identifierCode: v.string(),
-    bedId: v.string(),
-    diagnosis: v.string(),
-    admissionDate: v.string(),
+    initials: v.optional(v.string()),
+    identifierCode: v.optional(v.string()),
+    bedId: v.optional(v.string()),
+    diagnosis: v.optional(v.string()),
+    admissionDate: v.optional(v.string()),
     surgeryDate: v.optional(v.string()),
     procedureName: v.optional(v.string()),
     serviceName: v.optional(v.string()),
@@ -136,45 +232,8 @@ export const upsertPatient = mutation({
   handler: async (ctx, args) => {
     const { userClerkId } = await requireOrgMembership(ctx, args.organizationId)
 
-    const patientFields = sanitizePatientFields(args)
-    const clinicalFields = {
-      gender: args.gender,
-      isPregnant: args.isPregnant,
-      anamnesis: args.anamnesis,
-      vitals: args.vitals,
-      aaGradient: args.aaGradient,
-      criticalMedications: args.criticalMedications,
-      oncologyHistory: args.oncologyHistory,
-      reports: args.reports,
-      externalWard: args.externalWard,
-      thoracicInterventions: args.thoracicInterventions,
-      labCultures: args.labCultures,
-      consultations: args.consultations,
-      antibiotics: args.antibiotics,
-      visitNotes: args.visitNotes,
-    }
-
-    const conflictingBedAssignment =
-      patientFields.bedId === STAGING_BED_ID
-        ? null
-        : await ctx.db
-            .query("patients")
-            .withIndex("by_organization_bed_id", (queryBuilder) =>
-              queryBuilder
-                .eq("organizationId", patientFields.organizationId)
-                .eq("bedId", patientFields.bedId)
-            )
-            .unique()
-
-    if (
-      conflictingBedAssignment &&
-      conflictingBedAssignment._id !== args.patientId
-    ) {
-      throw new Error("That bed is already assigned to another patient.")
-    }
-
     let patientId = args.patientId
-    let action = `patient.created:${patientFields.bedId}`
+    let action: string
     let savedVersion = 1
 
     if (patientId) {
@@ -184,29 +243,132 @@ export const upsertPatient = mutation({
         throw new Error("Patient record not found.")
       }
 
-      if (existingPatient.organizationId !== patientFields.organizationId) {
+      if (existingPatient.organizationId !== args.organizationId) {
         throw new Error("You cannot update a patient outside your organization.")
       }
 
-      const serverVersion = existingPatient.version ?? 0
-      const clientVersion = args.version ?? 0
-
-      if (clientVersion !== serverVersion) {
-        throw new Error(
-          "CONFLICT: This patient was updated by another user. Please refresh and try again."
-        )
+      const patch = patientPatchFromMutationArgs(args)
+      if (Object.keys(patch).length === 0) {
+        return {
+          action: "patient.unchanged",
+          patientId,
+          version: existingPatient.version ?? 0,
+        }
       }
 
-      const nextVersion = serverVersion + 1
+      const mergedPatient = mergePatientFromPatch(existingPatient, patch)
+
+      const patientFields = sanitizePatientFields({
+        organizationId: mergedPatient.organizationId,
+        initials: mergedPatient.initials,
+        identifierCode: mergedPatient.identifierCode,
+        bedId: mergedPatient.bedId,
+        diagnosis: mergedPatient.diagnosis,
+        admissionDate: mergedPatient.admissionDate,
+        surgeryDate: mergedPatient.surgeryDate,
+        procedureName: mergedPatient.procedureName,
+        serviceName: mergedPatient.serviceName,
+      })
+
+      const conflictingBedAssignment =
+        patientFields.bedId === STAGING_BED_ID
+          ? null
+          : await ctx.db
+              .query("patients")
+              .withIndex("by_organization_bed_id", (queryBuilder) =>
+                queryBuilder
+                  .eq("organizationId", patientFields.organizationId)
+                  .eq("bedId", patientFields.bedId)
+              )
+              .unique()
+
+      if (
+        conflictingBedAssignment &&
+        conflictingBedAssignment._id !== patientId
+      ) {
+        throw new Error("That bed is already assigned to another patient.")
+      }
+
+      const nextVersion = (existingPatient.version ?? 0) + 1
       savedVersion = nextVersion
 
       await ctx.db.patch(patientId, {
         ...patientFields,
-        ...clinicalFields,
+        gender: mergedPatient.gender,
+        isPregnant: mergedPatient.isPregnant,
+        anamnesis: mergedPatient.anamnesis,
+        vitals: mergedPatient.vitals,
+        aaGradient: mergedPatient.aaGradient,
+        criticalMedications: mergedPatient.criticalMedications,
+        oncologyHistory: mergedPatient.oncologyHistory,
+        reports: mergedPatient.reports,
+        externalWard: mergedPatient.externalWard,
+        thoracicInterventions: mergedPatient.thoracicInterventions,
+        labCultures: mergedPatient.labCultures,
+        consultations: mergedPatient.consultations,
+        antibiotics: mergedPatient.antibiotics,
+        visitNotes: mergedPatient.visitNotes,
         version: nextVersion,
       })
       action = `patient.updated:${patientFields.bedId}`
     } else {
+      if (
+        args.initials === undefined ||
+        args.identifierCode === undefined ||
+        args.bedId === undefined ||
+        args.diagnosis === undefined ||
+        args.admissionDate === undefined
+      ) {
+        throw new Error("Missing required fields for new patient.")
+      }
+
+      const patientFields = sanitizePatientFields({
+        organizationId: args.organizationId,
+        initials: args.initials,
+        identifierCode: args.identifierCode,
+        bedId: args.bedId,
+        diagnosis: args.diagnosis,
+        admissionDate: args.admissionDate,
+        surgeryDate: args.surgeryDate,
+        procedureName: args.procedureName,
+        serviceName: args.serviceName,
+      })
+      const clinicalFields = {
+        gender: args.gender,
+        isPregnant: args.isPregnant,
+        anamnesis: args.anamnesis,
+        vitals: args.vitals,
+        aaGradient: args.aaGradient,
+        criticalMedications: args.criticalMedications,
+        oncologyHistory: args.oncologyHistory,
+        reports: args.reports,
+        externalWard: args.externalWard,
+        thoracicInterventions: args.thoracicInterventions,
+        labCultures: args.labCultures,
+        consultations: args.consultations,
+        antibiotics: args.antibiotics,
+        visitNotes: args.visitNotes,
+      }
+
+      const conflictingBedAssignment =
+        patientFields.bedId === STAGING_BED_ID
+          ? null
+          : await ctx.db
+              .query("patients")
+              .withIndex("by_organization_bed_id", (queryBuilder) =>
+                queryBuilder
+                  .eq("organizationId", patientFields.organizationId)
+                  .eq("bedId", patientFields.bedId)
+              )
+              .unique()
+
+      if (
+        conflictingBedAssignment &&
+        conflictingBedAssignment._id !== args.patientId
+      ) {
+        throw new Error("That bed is already assigned to another patient.")
+      }
+
       const [organization, patients] = await Promise.all([
         ctx.db
           .query("organizations")
@@ -238,11 +400,15 @@ export const upsertPatient = mutation({
         ...clinicalFields,
         version: 1,
       })
+      savedVersion = 1
+      action = `patient.created:${patientFields.bedId}`
     }
+
+    const organizationId = requireText(args.organizationId, "Organization")
 
     await ctx.runMutation(internal.audit.recordAuditLog, {
       action,
-      organizationId: patientFields.organizationId,
+      organizationId,
       timestamp: Date.now(),
       userId: userClerkId,
     })

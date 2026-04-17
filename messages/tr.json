@@ -200,6 +200,8 @@
     },
     "toasts": {
       "missingContext": "Önce bir klinik seçin ve giriş yapın.",
+      "organizationRequired": "Kaydetmeden önce bir klinik seçin.",
+      "bedRequired": "Kaydetmeden önce yatak veya Servis Bekleyenler seçin.",
       "requiredFields": "Ad soyad, İşlem No, tanı ve yatış tarihi gereklidir.",
       "invalidIdentifierCode": "İşlem No tam olarak 6 karakter olmalıdır.",
       "updated": "Hasta güncellendi.",

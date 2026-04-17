@@ -19,6 +19,7 @@ import {
   normalizeIdentifierCode,
   sanitizeIdentifierCodeInput,
 } from "@/lib/patient-identity"
+import { resolvePatientSheetErrorMessage } from "@/lib/patient-mutation-errors"
 import {
   generatePatientInitials,
   normalizePatientFullName,
@@ -32,32 +33,6 @@ type UsePatientSheetFormArgs = {
   organizationId?: string | null
   patient: PatientRecord | null
   userId?: string | null
-}
-
-function resolvePatientSheetErrorMessage(
-  error: unknown,
-  t: (key: string) => string
-): string {
-  if (!(error instanceof Error)) {
-    return t("toasts.saveError")
-  }
-
-  if (error.message.startsWith("CONFLICT:")) {
-    return t("toasts.conflict")
-  }
-
-  switch (error.message) {
-    case "TRIAL_LIMIT_REACHED":
-      return t("toasts.trialLimitReached")
-    case "That bed is already assigned to another patient.":
-      return t("toasts.bedOccupied")
-    case "Patient record not found.":
-      return t("toasts.notFound")
-    case "You cannot update a patient outside your organization.":
-      return t("toasts.crossOrganization")
-    default:
-      return error.message
-  }
 }
 
 export function usePatientSheetForm({
@@ -179,7 +154,7 @@ export function usePatientSheetForm({
       onOpenChange(false)
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("CONFLICT:")) {
-        toast.warning(resolvePatientSheetErrorMessage(error, t))
+        toast.warning(t("toasts.conflict"))
         return
       }
 

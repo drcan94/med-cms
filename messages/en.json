@@ -200,6 +200,8 @@
     },
     "toasts": {
       "missingContext": "Select a clinic and sign in first.",
+      "organizationRequired": "Select a clinic before saving.",
+      "bedRequired": "Choose a bed or Waiting List before saving.",
       "requiredFields": "Full name, transaction ID, diagnosis, and admission date are required.",
       "invalidIdentifierCode": "Transaction ID must be exactly 6 characters.",
       "updated": "Patient updated.",

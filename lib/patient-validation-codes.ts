@@ -1,0 +1,5 @@
+/** Stable Convex mutation error codes — map to UI copy via next-intl, not raw English. */
+
+export const PATIENT_ERR_ORGANIZATION_REQUIRED = "PATIENT_ERR_ORGANIZATION_REQUIRED"
+export const PATIENT_ERR_BED_REQUIRED = "PATIENT_ERR_BED_REQUIRED"
+export const PATIENT_ERR_IDENTIFIER_CODE_INVALID = "PATIENT_ERR_IDENTIFIER_CODE_INVALID"

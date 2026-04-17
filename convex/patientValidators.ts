@@ -3,6 +3,10 @@ import {
   requireIdentifierCode,
   resolveIdentifierCodeForInsert,
 } from "../lib/patient-identity"
+import {
+  PATIENT_ERR_BED_REQUIRED,
+  PATIENT_ERR_ORGANIZATION_REQUIRED,
+} from "../lib/patient-validation-codes"
 import { STAGING_BED_ID } from "../lib/patient-privacy"
 
 type PatientRecord = Doc<"patients">
@@ -42,6 +46,26 @@ export function requireText(value: string, fieldName: string): string {
   return normalizedValue
 }
 
+function normalizeStoredText(value: string | undefined): string {
+  return (value ?? "").trim()
+}
+
+export function requireOrganizationId(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    throw new Error(PATIENT_ERR_ORGANIZATION_REQUIRED)
+  }
+  return trimmed
+}
+
+export function requireBedId(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    throw new Error(PATIENT_ERR_BED_REQUIRED)
+  }
+  return trimmed
+}
+
 export function sanitizePatientFields(
   args: SanitizePatientFieldsArgs
 ): WritablePatientFields {
@@ -49,16 +73,23 @@ export function sanitizePatientFields(
   const procedureName = args.procedureName?.trim()
   const serviceName = args.serviceName?.trim()
 
+  const organizationId = normalizeStoredText(args.organizationId)
+  if (!organizationId) {
+    throw new Error(PATIENT_ERR_ORGANIZATION_REQUIRED)
+  }
+
+  const bedId = normalizeStoredText(args.bedId)
+  if (!bedId) {
+    throw new Error(PATIENT_ERR_BED_REQUIRED)
+  }
+
   return {
-    organizationId: requireText(args.organizationId, "Organization"),
-    initials: requireText(args.initials, "Patient initials"),
-    identifierCode: requireIdentifierCode(
-      args.identifierCode,
-      "Patient identifier code"
-    ),
-    bedId: requireText(args.bedId, "Bed"),
-    diagnosis: requireText(args.diagnosis, "Diagnosis"),
-    admissionDate: requireText(args.admissionDate, "Admission date"),
+    organizationId,
+    initials: normalizeStoredText(args.initials),
+    identifierCode: requireIdentifierCode(args.identifierCode),
+    bedId,
+    diagnosis: normalizeStoredText(args.diagnosis),
+    admissionDate: normalizeStoredText(args.admissionDate),
     surgeryDate: surgeryDate || undefined,
     procedureName: procedureName || undefined,
     serviceName: serviceName || undefined,
@@ -81,33 +112,21 @@ export function sanitizeNewPatientFields(args: {
   const procedureName = args.procedureName?.trim()
   const serviceName = args.serviceName?.trim()
 
-  const initials =
-    args.initials !== undefined && args.initials.trim() !== ""
-      ? requireText(args.initials, "Patient initials")
-      : "—"
+  const organizationId = normalizeStoredText(args.organizationId)
+  if (!organizationId) {
+    throw new Error(PATIENT_ERR_ORGANIZATION_REQUIRED)
+  }
 
-  const bedId =
-    args.bedId !== undefined && args.bedId.trim() !== ""
-      ? requireText(args.bedId, "Bed")
-      : STAGING_BED_ID
-
-  const diagnosis =
-    args.diagnosis !== undefined && args.diagnosis.trim() !== ""
-      ? requireText(args.diagnosis, "Diagnosis")
-      : "Pending"
-
-  const admissionDate =
-    args.admissionDate !== undefined && args.admissionDate.trim() !== ""
-      ? requireText(args.admissionDate, "Admission date")
-      : new Date().toISOString().slice(0, 10)
+  const rawBed = normalizeStoredText(args.bedId)
+  const bedId = rawBed || STAGING_BED_ID
 
   return {
-    organizationId: requireText(args.organizationId, "Organization"),
-    initials,
+    organizationId,
+    initials: normalizeStoredText(args.initials),
     identifierCode: resolveIdentifierCodeForInsert(args.identifierCode),
     bedId,
-    diagnosis,
-    admissionDate,
+    diagnosis: normalizeStoredText(args.diagnosis),
+    admissionDate: normalizeStoredText(args.admissionDate),
     surgeryDate: surgeryDate || undefined,
     procedureName: procedureName || undefined,
     serviceName: serviceName || undefined,

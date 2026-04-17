@@ -25,6 +25,7 @@ import type { AppLocale } from "@/i18n/routing"
 import { parseConventionRules } from "@/lib/clinic-settings"
 import { defaultClinicalRules, evaluateClinicalRules } from "@/lib/clinical-rules"
 import { formatDateForInput, toClinicalIsoDate } from "@/lib/patient-form"
+import { mapPatientMutationErrorDescription } from "@/lib/patient-mutation-errors"
 import { sanitizeIdentifierCodeInput } from "@/lib/patient-identity"
 import { generatePatientInitials, STAGING_BED_ID } from "@/lib/patient-privacy"
 import { evaluatePatientRules } from "@/lib/rule-engine"
@@ -610,15 +611,11 @@ export function PatientDialogLive({
         setSyncState("idle")
 
         if (error instanceof Error) {
-          if (error.message === "TRIAL_LIMIT_REACHED") {
-            toast.error(t("toasts.trialLimitReached"))
+          const mapped = mapPatientMutationErrorDescription(error, t)
+          if (mapped) {
+            toast.error(mapped)
             return
           }
-
-          toast.error(t("toasts.saveError"), {
-            description: error.message,
-          })
-          return
         }
         toast.error(t("toasts.saveError"))
       }
@@ -713,15 +710,11 @@ export function PatientDialogLive({
       setSyncState("idle")
 
       if (error instanceof Error) {
-        if (error.message === "TRIAL_LIMIT_REACHED") {
-          toast.error(t("toasts.trialLimitReached"))
+        const mapped = mapPatientMutationErrorDescription(error, t)
+        if (mapped) {
+          toast.error(mapped)
           return
         }
-
-        toast.error(t("toasts.saveError"), {
-          description: error.message,
-        })
-        return
       }
       toast.error(t("toasts.saveError"))
     }

@@ -1,3 +1,5 @@
+import { PATIENT_ERR_IDENTIFIER_CODE_INVALID } from "./patient-validation-codes"
+
 export const IDENTIFIER_CODE_LENGTH = 6
 const IDENTIFIER_CODE_PATTERN = /^[A-Z0-9]{6}$/
 const IDENTIFIER_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -14,14 +16,11 @@ export function isValidIdentifierCode(value: string): boolean {
   return IDENTIFIER_CODE_PATTERN.test(normalizeIdentifierCode(value))
 }
 
-export function requireIdentifierCode(
-  value: string,
-  fieldName = "Identifier code"
-): string {
+export function requireIdentifierCode(value: string): string {
   const normalizedValue = normalizeIdentifierCode(value)
 
   if (!IDENTIFIER_CODE_PATTERN.test(normalizedValue)) {
-    throw new Error(`${fieldName} must be exactly 6 letters or digits.`)
+    throw new Error(PATIENT_ERR_IDENTIFIER_CODE_INVALID)
   }
 
   return normalizedValue

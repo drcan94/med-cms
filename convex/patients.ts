@@ -25,6 +25,8 @@ import {
 } from "./clinicalValidators"
 import { mergePatientFromPatch, type PatientUpsertPatch } from "./patientMerge"
 import {
+  requireBedId,
+  requireOrganizationId,
   requireText,
   sanitizeNewPatientFields,
   sanitizePatientFields,
@@ -174,7 +176,7 @@ export const getPatientCount = query({
   handler: async (ctx, args) => {
     await requireOrgMembership(ctx, args.organizationId)
 
-    const organizationId = requireText(args.organizationId, "Organization")
+    const organizationId = requireOrganizationId(args.organizationId)
     const patients = await ctx.db
       .query("patients")
       .withIndex("by_organization_id", (queryBuilder) =>
@@ -398,7 +400,7 @@ export const upsertPatient = mutation({
       action = `patient.created:${patientFields.bedId}`
     }
 
-    const organizationId = requireText(args.organizationId, "Organization")
+    const organizationId = requireOrganizationId(args.organizationId)
 
     await ctx.runMutation(internal.audit.recordAuditLog, {
       action,
@@ -425,8 +427,8 @@ export const updatePatientBed = mutation({
   handler: async (ctx, args) => {
     const { userClerkId } = await requireOrgMembership(ctx, args.organizationId)
 
-    const organizationId = requireText(args.organizationId, "Organization")
-    const newBedId = requireText(args.newBedId, "Bed")
+    const organizationId = requireOrganizationId(args.organizationId)
+    const newBedId = requireBedId(args.newBedId)
     const patient = await ctx.db.get(args.patientId)
 
     if (!patient) {
@@ -498,7 +500,7 @@ export const updatePatientStatus = mutation({
   handler: async (ctx, args) => {
     const { userClerkId } = await requireOrgMembership(ctx, args.organizationId)
 
-    const organizationId = requireText(args.organizationId, "Organization")
+    const organizationId = requireOrganizationId(args.organizationId)
     const patient = await ctx.db.get(args.patientId)
 
     if (!patient) {
@@ -551,7 +553,7 @@ export const toggleClinicalRequirement = mutation({
   handler: async (ctx, args) => {
     const { userClerkId } = await requireOrgMembership(ctx, args.organizationId)
 
-    const organizationId = requireText(args.organizationId, "Organization")
+    const organizationId = requireOrganizationId(args.organizationId)
     const item = requireText(args.item, "Checklist item")
     const patient = await ctx.db.get(args.patientId)
 
@@ -615,7 +617,7 @@ export const addCustomTodo = mutation({
   handler: async (ctx, args) => {
     const { userClerkId } = await requireOrgMembership(ctx, args.organizationId)
 
-    const organizationId = requireText(args.organizationId, "Organization")
+    const organizationId = requireOrganizationId(args.organizationId)
     const text = requireText(args.text, "Todo text")
     const patient = await ctx.db.get(args.patientId)
 
@@ -667,7 +669,7 @@ export const toggleCustomTodo = mutation({
   handler: async (ctx, args) => {
     const { userClerkId } = await requireOrgMembership(ctx, args.organizationId)
 
-    const organizationId = requireText(args.organizationId, "Organization")
+    const organizationId = requireOrganizationId(args.organizationId)
     const patient = await ctx.db.get(args.patientId)
 
     if (!patient) {
@@ -728,7 +730,7 @@ export const deleteCustomTodo = mutation({
   handler: async (ctx, args) => {
     const { userClerkId } = await requireOrgMembership(ctx, args.organizationId)
 
-    const organizationId = requireText(args.organizationId, "Organization")
+    const organizationId = requireOrganizationId(args.organizationId)
     const patient = await ctx.db.get(args.patientId)
 
     if (!patient) {

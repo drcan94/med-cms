@@ -117,13 +117,15 @@ function formatVitalsSummary(
 
   const alerts: string[] = []
   if (vitals.isFebrile) {
-    alerts.push(t("vitals.alertFebrile", { temperature: vitals.temperature }))
+    alerts.push(
+      t("vitals.alertFebrile", { temperature: vitals.temperature ?? 0 })
+    )
   }
   if (vitals.isHypoxic) {
-    alerts.push(t("vitals.alertHypoxic", { spO2: vitals.spO2 }))
+    alerts.push(t("vitals.alertHypoxic", { spO2: vitals.spO2 ?? 0 }))
   }
   if (vitals.isTachycardic) {
-    alerts.push(t("vitals.alertTachycardic", { pulse: vitals.pulse }))
+    alerts.push(t("vitals.alertTachycardic", { pulse: vitals.pulse ?? 0 }))
   }
 
   if (alerts.length > 0) {
@@ -131,9 +133,9 @@ function formatVitalsSummary(
   }
 
   return t("vitals.line", {
-    bloodPressure: vitals.bloodPressure,
-    pulse: vitals.pulse,
-    spO2: vitals.spO2,
+    bloodPressure: vitals.bloodPressure ?? "—",
+    pulse: vitals.pulse ?? "—",
+    spO2: vitals.spO2 ?? "—",
   })
 }
 

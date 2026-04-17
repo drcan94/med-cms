@@ -1,5 +1,9 @@
 import type { Doc } from "./_generated/dataModel"
-import { requireIdentifierCode } from "../lib/patient-identity"
+import {
+  requireIdentifierCode,
+  resolveIdentifierCodeForInsert,
+} from "../lib/patient-identity"
+import { STAGING_BED_ID } from "../lib/patient-privacy"
 
 type PatientRecord = Doc<"patients">
 
@@ -55,6 +59,55 @@ export function sanitizePatientFields(
     bedId: requireText(args.bedId, "Bed"),
     diagnosis: requireText(args.diagnosis, "Diagnosis"),
     admissionDate: requireText(args.admissionDate, "Admission date"),
+    surgeryDate: surgeryDate || undefined,
+    procedureName: procedureName || undefined,
+    serviceName: serviceName || undefined,
+  }
+}
+
+/** Writable core fields for a newly inserted patient; allows drafts and minimal payloads. */
+export function sanitizeNewPatientFields(args: {
+  organizationId: string
+  initials?: string
+  identifierCode?: string
+  bedId?: string
+  diagnosis?: string
+  admissionDate?: string
+  surgeryDate?: string
+  procedureName?: string
+  serviceName?: string
+}): WritablePatientFields {
+  const surgeryDate = args.surgeryDate?.trim()
+  const procedureName = args.procedureName?.trim()
+  const serviceName = args.serviceName?.trim()
+
+  const initials =
+    args.initials !== undefined && args.initials.trim() !== ""
+      ? requireText(args.initials, "Patient initials")
+      : "—"
+
+  const bedId =
+    args.bedId !== undefined && args.bedId.trim() !== ""
+      ? requireText(args.bedId, "Bed")
+      : STAGING_BED_ID
+
+  const diagnosis =
+    args.diagnosis !== undefined && args.diagnosis.trim() !== ""
+      ? requireText(args.diagnosis, "Diagnosis")
+      : "Pending"
+
+  const admissionDate =
+    args.admissionDate !== undefined && args.admissionDate.trim() !== ""
+      ? requireText(args.admissionDate, "Admission date")
+      : new Date().toISOString().slice(0, 10)
+
+  return {
+    organizationId: requireText(args.organizationId, "Organization"),
+    initials,
+    identifierCode: resolveIdentifierCodeForInsert(args.identifierCode),
+    bedId,
+    diagnosis,
+    admissionDate,
     surgeryDate: surgeryDate || undefined,
     procedureName: procedureName || undefined,
     serviceName: serviceName || undefined,

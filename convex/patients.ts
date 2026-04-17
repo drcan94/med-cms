@@ -24,7 +24,11 @@ import {
   vitalsValidator,
 } from "./clinicalValidators"
 import { mergePatientFromPatch, type PatientUpsertPatch } from "./patientMerge"
-import { requireText, sanitizePatientFields } from "./patientValidators"
+import {
+  requireText,
+  sanitizeNewPatientFields,
+  sanitizePatientFields,
+} from "./patientValidators"
 
 function patientPatchFromMutationArgs(args: {
   initials?: string
@@ -312,17 +316,7 @@ export const upsertPatient = mutation({
       })
       action = `patient.updated:${patientFields.bedId}`
     } else {
-      if (
-        args.initials === undefined ||
-        args.identifierCode === undefined ||
-        args.bedId === undefined ||
-        args.diagnosis === undefined ||
-        args.admissionDate === undefined
-      ) {
-        throw new Error("Missing required fields for new patient.")
-      }
-
-      const patientFields = sanitizePatientFields({
+      const patientFields = sanitizeNewPatientFields({
         organizationId: args.organizationId,
         initials: args.initials,
         identifierCode: args.identifierCode,

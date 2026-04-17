@@ -546,29 +546,41 @@ export function VitalsAnamnesisSection({
           {aaGradientResult && (
             <Card
               className={
-                aaGradientResult.etiology === "intrinsic"
+                (aaGradientResult.etiology ?? "extrinsic") === "intrinsic"
                   ? "border-red-200 bg-red-50/30 dark:border-red-900 dark:bg-red-950/20"
                   : "border-emerald-200 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20"
               }
             >
               <CardContent className="space-y-3 p-4">
                 <p className="text-sm font-medium">
-                  {aaGradientResult.etiology === "intrinsic"
+                  {(aaGradientResult.etiology ?? "extrinsic") === "intrinsic"
                     ? t("aaGradient.result.intrinsic")
                     : t("aaGradient.result.extrinsic")}
                 </p>
                 <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                  <p>{t("aaGradient.result.estimatedFiO2", { value: aaGradientResult.estimatedFiO2 })}</p>
-                  <p>{t("aaGradient.result.pAO2", { value: aaGradientResult.pAO2 })}</p>
-                  <p>{t("aaGradient.result.gradient", { value: aaGradientResult.gradient })}</p>
+                  <p>
+                    {t("aaGradient.result.estimatedFiO2", {
+                      value: aaGradientResult.estimatedFiO2 ?? 0,
+                    })}
+                  </p>
+                  <p>
+                    {t("aaGradient.result.pAO2", {
+                      value: aaGradientResult.pAO2 ?? 0,
+                    })}
+                  </p>
+                  <p>
+                    {t("aaGradient.result.gradient", {
+                      value: aaGradientResult.gradient ?? 0,
+                    })}
+                  </p>
                   <p>
                     {t("aaGradient.result.expectedGradient", {
-                      value: aaGradientResult.expectedGradient,
+                      value: aaGradientResult.expectedGradient ?? 0,
                     })}
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {aaGradientResult.etiology === "intrinsic"
+                  {(aaGradientResult.etiology ?? "extrinsic") === "intrinsic"
                     ? t("aaGradient.result.intrinsicHint")
                     : t("aaGradient.result.extrinsicHint")}
                 </p>

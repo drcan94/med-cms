@@ -41,10 +41,10 @@ export type LabCultureSummary = {
 }
 
 export type VitalsSummary = {
-  temperature: number
-  bloodPressure: string
-  pulse: number
-  spO2: number
+  temperature?: number
+  bloodPressure?: string
+  pulse?: number
+  spO2?: number
   isHypoxic: boolean
   isFebrile: boolean
   isTachycardic: boolean
@@ -113,14 +113,18 @@ function buildVitalsSummary(
 ): VitalsSummary | undefined {
   if (!vitals) return undefined
 
+  const spO2 = vitals.spO2
+  const temperature = vitals.temperature
+  const pulse = vitals.pulse
+
   return {
-    temperature: vitals.temperature,
+    temperature,
     bloodPressure: vitals.bloodPressure,
-    pulse: vitals.pulse,
-    spO2: vitals.spO2,
-    isHypoxic: vitals.spO2 < 92,
-    isFebrile: vitals.temperature >= 38,
-    isTachycardic: vitals.pulse > 100,
+    pulse,
+    spO2,
+    isHypoxic: spO2 !== undefined && spO2 < 92,
+    isFebrile: temperature !== undefined && temperature >= 38,
+    isTachycardic: pulse !== undefined && pulse > 100,
   }
 }
 

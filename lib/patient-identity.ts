@@ -1,5 +1,6 @@
 export const IDENTIFIER_CODE_LENGTH = 6
 const IDENTIFIER_CODE_PATTERN = /^[A-Z0-9]{6}$/
+const IDENTIFIER_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 export function normalizeIdentifierCode(value: string): string {
   return value.trim().toUpperCase()
@@ -24,6 +25,30 @@ export function requireIdentifierCode(
   }
 
   return normalizedValue
+}
+
+/** Random 6-character code for draft patients when the client omits or sends an invalid code. */
+export function generateDraftIdentifierCode(): string {
+  let out = ""
+  for (let i = 0; i < IDENTIFIER_CODE_LENGTH; i++) {
+    out +=
+      IDENTIFIER_CODE_ALPHABET[
+        Math.floor(Math.random() * IDENTIFIER_CODE_ALPHABET.length)
+      ]
+  }
+  return out
+}
+
+/** Use a valid 6-character code if present; otherwise allocate a draft code (live auto-save). */
+export function resolveIdentifierCodeForInsert(value: string | undefined): string {
+  if (value === undefined || value.trim() === "") {
+    return generateDraftIdentifierCode()
+  }
+  const normalized = normalizeIdentifierCode(value)
+  if (isValidIdentifierCode(normalized)) {
+    return normalized
+  }
+  return generateDraftIdentifierCode()
 }
 
 /**

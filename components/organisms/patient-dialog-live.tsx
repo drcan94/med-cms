@@ -145,14 +145,16 @@ function shouldSaveImmediately(fieldName?: string): boolean {
 }
 
 function canPersistNewPatient(data: PatientFormData): boolean {
+  const id = sanitizeIdentifierCodeInput(data.identifierCode ?? "")
+  if (id.length === 6) {
+    return true
+  }
   const fullName = data.fullName?.trim() ?? ""
-  const id = sanitizeIdentifierCodeInput(data.identifierCode)
   const diagnosis = data.diagnosis?.trim() ?? ""
   const admission = data.admissionDate?.trim() ?? ""
   return (
-    fullName.length > 0 &&
-    id.length === 6 &&
-    diagnosis.length > 0 &&
+    fullName.length > 0 ||
+    diagnosis.length > 0 ||
     admission.length > 0
   )
 }
@@ -324,7 +326,9 @@ export function PatientDialogLive({
 
   const applyPatientToForm = useCallback(
     (record: PatientRecord) => {
-      const currentId = sanitizeIdentifierCodeInput(form.getValues("identifierCode"))
+      const currentId = sanitizeIdentifierCodeInput(
+        form.getValues("identifierCode") ?? ""
+      )
       const preserveTypedName =
         Boolean(form.formState.dirtyFields.fullName) &&
         record.identifierCode === currentId
@@ -504,7 +508,9 @@ export function PatientDialogLive({
         ...(includeInitialsFromFullName ? { initials: initialsFromName } : {}),
         ...(patch.identifierCode !== undefined
           ? {
-              identifierCode: sanitizeIdentifierCodeInput(patch.identifierCode),
+              identifierCode: sanitizeIdentifierCodeInput(
+                patch.identifierCode ?? ""
+              ),
             }
           : {}),
         ...(patch.bedId !== undefined
@@ -588,7 +594,9 @@ export function PatientDialogLive({
         if (fullName) {
           setPatientName({
             fullName,
-            identifierCode: sanitizeIdentifierCodeInput(data.identifierCode),
+            identifierCode: sanitizeIdentifierCodeInput(
+              data.identifierCode ?? ""
+            ),
             initials: initialsFromName,
           })
         }
@@ -619,16 +627,21 @@ export function PatientDialogLive({
 
     const { normalizedOncologyHistory, normalizedVitals } =
       buildNormalizedPayload()
+    const resolvedIdentifier = sanitizeIdentifierCodeInput(
+      normalizedData.identifierCode ?? ""
+    )
     const insertArgs = {
       organizationId,
       userId,
       initials: initialsFromName,
-      identifierCode: sanitizeIdentifierCodeInput(
-        normalizedData.identifierCode
-      ),
+      ...(resolvedIdentifier.length === 6
+        ? { identifierCode: resolvedIdentifier }
+        : {}),
       bedId: normalizedData.bedId || STAGING_BED_ID,
-      diagnosis: normalizedData.diagnosis,
-      admissionDate: toClinicalIsoDate(normalizedData.admissionDate),
+      diagnosis: normalizedData.diagnosis?.trim() || undefined,
+      admissionDate: normalizedData.admissionDate?.trim()
+        ? toClinicalIsoDate(normalizedData.admissionDate)
+        : undefined,
       surgeryDate: normalizedData.surgeryDate
         ? toClinicalIsoDate(normalizedData.surgeryDate)
         : undefined,
@@ -684,7 +697,9 @@ export function PatientDialogLive({
       if (fullName) {
         setPatientName({
           fullName,
-          identifierCode: sanitizeIdentifierCodeInput(data.identifierCode),
+          identifierCode: sanitizeIdentifierCodeInput(
+            data.identifierCode ?? ""
+          ),
           initials: initialsFromName,
         })
       }

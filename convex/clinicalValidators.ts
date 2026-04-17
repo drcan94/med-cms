@@ -6,15 +6,17 @@ import { v } from "convex/values"
  */
 
 export const smokingHistoryValidator = v.object({
-  status: v.union(v.literal("active"), v.literal("former"), v.literal("never")),
+  status: v.optional(
+    v.union(v.literal("active"), v.literal("former"), v.literal("never"))
+  ),
   packYears: v.optional(v.number()),
 })
 
 export const anamnesisValidator = v.object({
-  chiefComplaint: v.string(),
-  historyOfPresentIllness: v.string(),
-  knownDiseases: v.array(v.string()),
-  pastSurgeries: v.array(v.string()),
+  chiefComplaint: v.optional(v.string()),
+  historyOfPresentIllness: v.optional(v.string()),
+  knownDiseases: v.optional(v.array(v.string())),
+  pastSurgeries: v.optional(v.array(v.string())),
   allergies: v.optional(v.array(v.string())),
   regularMedications: v.optional(v.array(v.string())),
   smoking: v.optional(smokingHistoryValidator),
@@ -23,14 +25,14 @@ export const anamnesisValidator = v.object({
 export const oncologyHistoryValidator = v.object({
   chemotherapy: v.optional(
     v.object({
-      received: v.boolean(),
+      received: v.optional(v.boolean()),
       lastSessionAt: v.optional(v.string()),
       details: v.optional(v.string()),
     })
   ),
   radiotherapy: v.optional(
     v.object({
-      received: v.boolean(),
+      received: v.optional(v.boolean()),
       lastSessionAt: v.optional(v.string()),
       details: v.optional(v.string()),
     })
@@ -78,28 +80,30 @@ export const symptomsValidator = v.object({
 })
 
 export const vitalsValidator = v.object({
-  temperature: v.number(),
-  bloodPressure: v.string(),
-  pulse: v.number(),
-  spO2: v.number(),
-  symptoms: symptomsValidator,
-  recordedAt: v.string(),
+  temperature: v.optional(v.number()),
+  bloodPressure: v.optional(v.string()),
+  pulse: v.optional(v.number()),
+  spO2: v.optional(v.number()),
+  symptoms: v.optional(symptomsValidator),
+  recordedAt: v.optional(v.string()),
 })
 
 export const aaGradientResultValidator = v.object({
-  estimatedFiO2: v.number(),
-  pAO2: v.number(),
-  gradient: v.number(),
-  expectedGradient: v.number(),
-  isElevated: v.boolean(),
-  etiology: v.union(v.literal("intrinsic"), v.literal("extrinsic")),
-  clinicalInterpretation: v.string(),
+  estimatedFiO2: v.optional(v.number()),
+  pAO2: v.optional(v.number()),
+  gradient: v.optional(v.number()),
+  expectedGradient: v.optional(v.number()),
+  isElevated: v.optional(v.boolean()),
+  etiology: v.optional(
+    v.union(v.literal("intrinsic"), v.literal("extrinsic"))
+  ),
+  clinicalInterpretation: v.optional(v.string()),
 })
 
 export const aaGradientValidator = v.object({
-  age: v.number(),
-  paO2: v.number(),
-  paCO2: v.number(),
+  age: v.optional(v.number()),
+  paO2: v.optional(v.number()),
+  paCO2: v.optional(v.number()),
   fio2: v.optional(v.number()),
   o2Liters: v.optional(v.number()),
   patm: v.optional(v.number()),
@@ -111,17 +115,17 @@ export const criticalMedicationValidator = v.object({
   anticoagulants: v.optional(
     v.array(
       v.object({
-        name: v.string(),
-        lastDoseAt: v.string(),
+        name: v.optional(v.string()),
+        lastDoseAt: v.optional(v.string()),
       })
     )
   ),
   antidiabetics: v.optional(
     v.array(
       v.object({
-        type: v.union(v.literal("oral"), v.literal("insulin")),
-        name: v.string(),
-        lastDoseAt: v.string(),
+        type: v.optional(v.union(v.literal("oral"), v.literal("insulin"))),
+        name: v.optional(v.string()),
+        lastDoseAt: v.optional(v.string()),
       })
     )
   ),

@@ -46,28 +46,28 @@ export const symptomsSchema = z.object({
 })
 
 export const vitalsSchema = z.object({
-  temperature: z.number().min(30).max(45),
-  bloodPressure: z.string(),
-  pulse: z.number().min(20).max(300),
-  spO2: z.number().min(0).max(100),
-  symptoms: symptomsSchema,
+  temperature: z.number().min(30).max(45).optional(),
+  bloodPressure: z.union([z.string(), z.literal("")]).optional(),
+  pulse: z.number().min(20).max(300).optional(),
+  spO2: z.number().min(0).max(100).optional(),
+  symptoms: symptomsSchema.optional(),
   recordedAt: z.string().optional(),
 })
 
 export const aaGradientResultSchema = z.object({
-  estimatedFiO2: z.number(),
-  pAO2: z.number(),
-  gradient: z.number(),
-  expectedGradient: z.number(),
-  isElevated: z.boolean(),
-  etiology: z.enum(["intrinsic", "extrinsic"]),
-  clinicalInterpretation: z.string(),
+  estimatedFiO2: z.number().optional(),
+  pAO2: z.number().optional(),
+  gradient: z.number().optional(),
+  expectedGradient: z.number().optional(),
+  isElevated: z.boolean().optional(),
+  etiology: z.enum(["intrinsic", "extrinsic"]).optional(),
+  clinicalInterpretation: z.union([z.string(), z.literal("")]).optional(),
 })
 
 export const aaGradientSchema = z.object({
-  age: z.number().min(0).max(120),
-  paO2: z.number().min(0),
-  paCO2: z.number().min(0),
+  age: z.number().min(0).max(120).optional(),
+  paO2: z.number().min(0).optional(),
+  paCO2: z.number().min(0).optional(),
   fio2: z.number().min(0.21).max(1).optional(),
   o2Liters: z.number().min(0).max(25).optional(),
   patm: z.number().min(300).max(900).optional(),
@@ -76,15 +76,15 @@ export const aaGradientSchema = z.object({
 })
 
 export const smokingHistorySchema = z.object({
-  status: z.enum(["active", "former", "never"]),
+  status: z.enum(["active", "former", "never"]).optional(),
   packYears: z.number().min(0).optional(),
 })
 
 export const anamnesisSchema = z.object({
-  chiefComplaint: z.string().min(1, "Chief complaint is required"),
-  historyOfPresentIllness: z.string(),
-  knownDiseases: z.array(z.string()),
-  pastSurgeries: z.array(z.string()),
+  chiefComplaint: z.union([z.string(), z.literal("")]).optional(),
+  historyOfPresentIllness: z.union([z.string(), z.literal("")]).optional(),
+  knownDiseases: z.array(z.string()).optional(),
+  pastSurgeries: z.array(z.string()).optional(),
   allergies: z.array(z.string()).optional(),
   regularMedications: z.array(z.string()).optional(),
   smoking: smokingHistorySchema.optional(),
@@ -102,14 +102,14 @@ export const oncologyHistorySchema = z.object({
 })
 
 export const anticoagulantEntrySchema = z.object({
-  name: z.string().min(1, "Medication name is required"),
-  lastDoseAt: z.string(),
+  name: z.union([z.string(), z.literal("")]).optional(),
+  lastDoseAt: z.union([z.string(), z.literal("")]).optional(),
 })
 
 export const antidiabeticEntrySchema = z.object({
-  type: z.enum(["oral", "insulin"]),
-  name: z.string().min(1, "Medication name is required"),
-  lastDoseAt: z.string(),
+  type: z.enum(["oral", "insulin"]).optional(),
+  name: z.union([z.string(), z.literal("")]).optional(),
+  lastDoseAt: z.union([z.string(), z.literal("")]).optional(),
 })
 
 export const criticalMedicationSchema = z.object({
@@ -214,14 +214,14 @@ export const visitNoteSchema = z.object({
  * Basic fields remain required; clinical fields are optional.
  */
 export const patientFormSchema = z.object({
-  fullName: z.string(),
-  identifierCode: z.string(),
-  bedId: z.string(),
-  serviceName: z.string().optional(),
-  diagnosis: z.string().min(1, "Diagnosis is required"),
-  admissionDate: z.string().min(1, "Admission date is required"),
-  surgeryDate: z.string().optional(),
-  procedureName: z.string().optional(),
+  fullName: z.union([z.string(), z.literal("")]).optional(),
+  identifierCode: z.union([z.string(), z.literal("")]).optional(),
+  bedId: z.union([z.string(), z.literal("")]).optional(),
+  serviceName: z.union([z.string(), z.literal("")]).optional(),
+  diagnosis: z.union([z.string(), z.literal("")]).optional(),
+  admissionDate: z.union([z.string(), z.literal("")]).optional(),
+  surgeryDate: z.union([z.string(), z.literal("")]).optional(),
+  procedureName: z.union([z.string(), z.literal("")]).optional(),
   gender: z.enum(["male", "female"]).optional(),
   isPregnant: z.boolean().optional(),
   version: z.number().optional(),
